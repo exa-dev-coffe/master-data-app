@@ -5,6 +5,9 @@ import (
 	"strconv"
 	"strings"
 
+	"eka-dev.com/master-data/middleware"
+	"eka-dev.com/master-data/utils"
+	"eka-dev.com/master-data/utils/response"
 	"github.com/gofiber/fiber/v2"
 	"github.com/jmoiron/sqlx"
 )
@@ -113,4 +116,32 @@ func WithTransaction[P any](db *sqlx.DB, fn func(tx *sqlx.Tx, args P) error, arg
 	}
 
 	return nil
+}
+
+func GetClaimsFromLocals(c *fiber.Ctx) (*middleware.Claims, error) {
+	user := c.Locals("user")
+	claims, ok := user.(*middleware.Claims)
+	if !ok {
+		return nil, response.InternalServerError("Failed to get user from token", nil)
+	}
+	return claims, nil
+}
+
+func GetDeleteRequest(c *fiber.Ctx) (*DeleteRequest, error) {
+	var request DeleteRequest
+	err := c.QueryParser(&request)
+	if err != nil {
+		return nil, response.BadRequest("Invalid query parameters: "+err.Error(), nil)
+	}
+	if request.Id <= 0 {
+		return nil, response.BadRequest("Invalid id parameter", nil)
+	}
+
+	err = utils.ValidateRequest(request)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &request, nil
 }

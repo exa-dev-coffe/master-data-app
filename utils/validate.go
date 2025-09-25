@@ -3,10 +3,12 @@ package utils
 import (
 	"errors"
 
+	"eka-dev.com/master-data/lib"
+	"eka-dev.com/master-data/utils/response"
 	"github.com/go-playground/validator/v10"
 )
 
-func FormatValidationError(err error) map[string]string {
+func formatValidationError(err error) map[string]string {
 	errorsMap := make(map[string]string)
 	var errs validator.ValidationErrors
 	if errors.As(err, &errs) {
@@ -22,9 +24,8 @@ func FormatValidationError(err error) map[string]string {
 	return errorsMap
 }
 
-func ValidateStruct(s interface{}) error {
-	validate := validator.New()
-	return validate.Struct(s)
+func validateStruct(s interface{}) error {
+	return lib.Validate.Struct(s)
 }
 
 func validationMessage(e validator.FieldError) string {
@@ -40,4 +41,12 @@ func validationMessage(e validator.FieldError) string {
 	default:
 		return "failed on " + e.Tag()
 	}
+}
+
+func ValidateRequest(s interface{}) error {
+	err := validateStruct(s)
+	if err != nil {
+		return response.BadRequest("Validation error", formatValidationError(err))
+	}
+	return nil
 }

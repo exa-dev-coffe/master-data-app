@@ -1,4 +1,4 @@
-package Categories
+package category
 
 import (
 	"eka-dev.com/master-data/utils/common"
@@ -33,7 +33,8 @@ func (r *categoryRepository) GetListCategoriesPagination(params common.ParamsLis
 
 	rows, err := r.db.NamedQuery(finalQuery, args)
 	if err != nil {
-		return nil, response.InternalServerError("Failed to execute query", err)
+		log.Error("Failed to execute query:", err)
+		return nil, response.InternalServerError("Failed to execute query", nil)
 	}
 
 	defer func(rows *sqlx.Rows) {
@@ -46,7 +47,8 @@ func (r *categoryRepository) GetListCategoriesPagination(params common.ParamsLis
 	for rows.Next() {
 		var category Category
 		if err := rows.StructScan(&category); err != nil {
-			return nil, err
+			log.Error("Failed to scan category:", err)
+			return nil, response.InternalServerError("Failed to scan category", nil)
 		}
 		record = append(record, category)
 	}
@@ -58,7 +60,8 @@ func (r *categoryRepository) GetListCategoriesPagination(params common.ParamsLis
 	countStmt, err := r.db.PrepareNamed(countFinalQuery)
 
 	if err != nil {
-		return nil, response.InternalServerError("Failed to prepare count statement", err)
+		log.Error("Failed to prepare count statement:", err)
+		return nil, response.InternalServerError("Failed to prepare count statement", nil)
 	}
 	defer func(countStmt *sqlx.NamedStmt) {
 		err := countStmt.Close()
@@ -70,7 +73,7 @@ func (r *categoryRepository) GetListCategoriesPagination(params common.ParamsLis
 	err = countStmt.Get(&totalData, countArgs)
 	if err != nil {
 		log.Error("Failed to get total data:", err)
-		return nil, response.InternalServerError("Failed to get total data", err)
+		return nil, response.InternalServerError("Failed to get total data", nil)
 	}
 
 	pagination := response.Pagination{

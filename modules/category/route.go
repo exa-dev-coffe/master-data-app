@@ -1,4 +1,4 @@
-package Categories
+package category
 
 import (
 	"eka-dev.com/master-data/middleware"
@@ -9,25 +9,33 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-type Handler struct {
+type Handler interface {
+	GetCategories(c *fiber.Ctx) error
+	CreateCategory(c *fiber.Ctx) error
+	DeleteCategory(c *fiber.Ctx) error
+}
+
+type handler struct {
 	service Service
 	db      *sqlx.DB
 }
 
 // NewHandler return handler dan daftarin route
-func NewHandler(app *fiber.App, db *sqlx.DB) {
+func NewHandler(app *fiber.App, db *sqlx.DB) Handler {
 	repo := NewCategoryRepository(db)
 	service := NewCategoryService(repo, db)
-	handler := &Handler{service: service, db: db}
+	handler := &handler{service: service, db: db}
 
 	// mapping routes
 	routes := app.Group("/api/1.0/categories")
 	routes.Get("", handler.GetCategories)
 	routes.Post("", middleware.RequireRole("admin"), handler.CreateCategory)
 	routes.Delete("", middleware.RequireRole("admin"), handler.DeleteCategory)
+
+	return handler
 }
 
-func (h *Handler) GetCategories(c *fiber.Ctx) error {
+func (h *handler) GetCategories(c *fiber.Ctx) error {
 	// parsing query params
 	queryParams := c.Queries()
 	var paramsListRequest common.ParamsListRequest
@@ -36,9 +44,9 @@ func (h *Handler) GetCategories(c *fiber.Ctx) error {
 		return response.BadRequest("Invalid query parameters: "+err.Error(), nil)
 	}
 
-	err = utils.ValidateStruct(paramsListRequest)
+	err = utils.ValidateRequest(paramsListRequest)
 	if err != nil {
-		return response.BadRequest("Validation error", utils.FormatValidationError(err))
+		return err
 	}
 
 	var records interface{}
@@ -55,17 +63,24 @@ func (h *Handler) GetCategories(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(response.Success("Success", records))
 }
 
-func (h *Handler) CreateCategory(c *fiber.Ctx) error {
+func (h *handler) CreateCategory(c *fiber.Ctx) error {
 	var request CreateCategoryRequest
 	err := c.BodyParser(&request)
 	if err != nil {
 		return response.BadRequest("Invalid request body: "+err.Error(), nil)
 	}
 
-	err = utils.ValidateStruct(request)
+	err = utils.ValidateRequest(request)
 	if err != nil {
-		return response.BadRequest("Validation error", utils.FormatValidationError(err))
+		return err
 	}
+
+	claims, err := common.GetClaimsFromLocals(c)
+	if err != nil {
+		return err
+	}
+
+	request.CreatedBy = claims.UserId
 
 	err = common.WithTransaction[CreateCategoryRequest](h.db, h.service.InsertCategory, request)
 	if err != nil {
@@ -75,20 +90,13 @@ func (h *Handler) CreateCategory(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusCreated).JSON(response.Success("Category created successfully", nil))
 }
 
-func (h *Handler) DeleteCategory(c *fiber.Ctx) error {
-	var request common.DeleteRequest
-	err := c.QueryParser(&request)
+func (h *handler) DeleteCategory(c *fiber.Ctx) error {
+	request, err := common.GetDeleteRequest(c)
 	if err != nil {
-		return response.BadRequest("Invalid query parameters: "+err.Error(), nil)
-
+		return err
 	}
 
-	err = utils.ValidateStruct(request)
-	if err != nil {
-		return response.BadRequest("Validation error", utils.FormatValidationError(err))
-	}
-
-	err = common.WithTransaction[common.DeleteRequest](h.db, h.service.DeleteCategory, request)
+	err = common.WithTransaction[*common.DeleteRequest](h.db, h.service.DeleteCategory, request)
 	if err != nil {
 		return err
 	}
