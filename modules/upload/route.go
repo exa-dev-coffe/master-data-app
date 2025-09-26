@@ -6,6 +6,7 @@ import (
 	"eka-dev.com/master-data/utils/common"
 	"eka-dev.com/master-data/utils/response"
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/log"
 )
 
 type Handler interface {
@@ -34,7 +35,8 @@ func (s *handler) UploadMenuFoto(c *fiber.Ctx) error {
 	// Parse the multipart form:
 	form, err := c.MultipartForm()
 	if err != nil {
-		return response.BadRequest("Failed to parse multipart form: "+err.Error(), nil)
+		log.Error("Error parsing multipart form: ", err)
+		return response.BadRequest("Failed to parse multipart form", nil)
 	}
 
 	files := form.File["file"]
@@ -62,7 +64,8 @@ func (s *handler) DeleteMenuFoto(c *fiber.Ctx) error {
 	var request common.DeleteImageRequest
 	err := c.QueryParser(&request)
 	if err != nil {
-		return response.BadRequest("Invalid query parameters: "+err.Error(), nil)
+		log.Error("Error parsing request: ", err)
+		return response.BadRequest("Invalid query parameters", nil)
 	}
 
 	err = lib.ValidateRequest(request)

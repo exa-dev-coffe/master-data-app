@@ -6,6 +6,7 @@ import (
 	"eka-dev.com/master-data/utils/common"
 	"eka-dev.com/master-data/utils/response"
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/log"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -44,7 +45,7 @@ func (h *handler) GetMenus(c *fiber.Ctx) error {
 	var paramsListRequest common.ParamsListRequest
 	err := common.ParseQueryParams(queryParams, &paramsListRequest)
 	if err != nil {
-		return response.BadRequest("Invalid query parameters: "+err.Error(), nil)
+		return err
 	}
 
 	err = lib.ValidateRequest(paramsListRequest)
@@ -70,7 +71,8 @@ func (h *handler) CreateMenu(c *fiber.Ctx) error {
 	var request CreateMenuRequest
 	err := c.BodyParser(&request)
 	if err != nil {
-		return response.BadRequest("Invalid request body: "+err.Error(), nil)
+		log.Error("Error parsing request body: ", err)
+		return response.BadRequest("Invalid request body", err)
 	}
 
 	err = lib.ValidateRequest(request)
