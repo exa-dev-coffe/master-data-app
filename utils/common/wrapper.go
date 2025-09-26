@@ -51,7 +51,7 @@ func ParseQueryParams(queryParams map[string]string, params *ParamsListRequest) 
 	if page, ok := queryParams["page"]; ok {
 		pg, err := strconv.Atoi(page)
 		if err != nil {
-			return fiber.NewError(fiber.StatusBadRequest, "Invalid page parameter")
+			return response.BadRequest("Invalid page parameter", nil)
 		}
 		params.Page = pg
 	} else {
@@ -60,7 +60,7 @@ func ParseQueryParams(queryParams map[string]string, params *ParamsListRequest) 
 	if size, ok := queryParams["size"]; ok {
 		sz, err := strconv.Atoi(size)
 		if err != nil {
-			return fiber.NewError(fiber.StatusBadRequest, "Invalid limit parameter")
+			return response.BadRequest("Invalid size parameter", nil)
 		}
 		params.Size = sz
 	} else {
