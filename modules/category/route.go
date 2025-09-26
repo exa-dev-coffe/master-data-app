@@ -1,8 +1,8 @@
 package category
 
 import (
+	"eka-dev.com/master-data/lib"
 	"eka-dev.com/master-data/middleware"
-	"eka-dev.com/master-data/utils"
 	"eka-dev.com/master-data/utils/common"
 	"eka-dev.com/master-data/utils/response"
 	"github.com/gofiber/fiber/v2"
@@ -44,7 +44,7 @@ func (h *handler) GetCategories(c *fiber.Ctx) error {
 		return response.BadRequest("Invalid query parameters: "+err.Error(), nil)
 	}
 
-	err = utils.ValidateRequest(paramsListRequest)
+	err = lib.ValidateRequest(paramsListRequest)
 	if err != nil {
 		return err
 	}
@@ -70,7 +70,7 @@ func (h *handler) CreateCategory(c *fiber.Ctx) error {
 		return response.BadRequest("Invalid request body: "+err.Error(), nil)
 	}
 
-	err = utils.ValidateRequest(request)
+	err = lib.ValidateRequest(request)
 	if err != nil {
 		return err
 	}
@@ -91,12 +91,12 @@ func (h *handler) CreateCategory(c *fiber.Ctx) error {
 }
 
 func (h *handler) DeleteCategory(c *fiber.Ctx) error {
-	request, err := common.GetDeleteRequest(c)
+	request, err := common.GetOneDataRequest(c)
 	if err != nil {
 		return err
 	}
 
-	err = common.WithTransaction[*common.DeleteRequest](h.db, h.service.DeleteCategory, request)
+	err = common.WithTransaction[*common.OneRequest](h.db, h.service.DeleteCategory, request)
 	if err != nil {
 		return err
 	}

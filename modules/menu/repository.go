@@ -13,6 +13,7 @@ type Repository interface {
 	InsertMenu(tx *sqlx.Tx, model CreateMenuRequest) error
 	UpdateMenu(tx *sqlx.Tx, model UpdateMenuRequest) error
 	DeleteMenu(tx *sqlx.Tx, id int) error
+	GetOneMenu(id int) (*Menu, error)
 }
 
 type menuRepository struct {
@@ -163,4 +164,19 @@ func (r *menuRepository) DeleteMenu(tx *sqlx.Tx, id int) error {
 		return response.NotFound("Menu not found", nil)
 	}
 	return nil
+}
+
+func (r *menuRepository) GetOneMenu(id int) (*Menu, error) {
+	var menu Menu
+	query := `SELECT m.id, m.name, m.description, m.price, m.photo, m.is_available, COALESCE(c.id, 0) AS category_id, COALESCE(c.name, 'Uncategorized') AS category_nama FROM tm_menus m
+	JOIN tm_categories c ON m.category_id = c.id WHERE m.id=$1`
+	err := r.db.Get(&menu, query, id)
+	if err != nil {
+		log.Error("Failed to get menu:", err)
+		return nil, response.InternalServerError("Failed to get menu", nil)
+	}
+	if menu.Id == 0 {
+		return nil, response.NotFound("Menu not found", nil)
+	}
+	return &menu, nil
 }

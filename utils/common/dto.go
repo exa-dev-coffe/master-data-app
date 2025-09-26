@@ -17,8 +17,12 @@ type Sort struct {
 	Order string
 }
 
-type DeleteRequest struct {
+type OneRequest struct {
 	Id int `query:"id" validate:"required"`
+}
+
+type DeleteImageRequest struct {
+	Url string `query:"url" validate:"required"`
 }
 
 type GetByIDRequest struct {

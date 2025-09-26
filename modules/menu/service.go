@@ -11,7 +11,8 @@ type Service interface {
 	GetListMenusNoPagination(request common.ParamsListRequest) (*[]Menu, error)
 	InsertMenu(tx *sqlx.Tx, menu CreateMenuRequest) error
 	UpdateMenu(tx *sqlx.Tx, menu UpdateMenuRequest) error
-	DeleteMenu(tx *sqlx.Tx, request *common.DeleteRequest) error
+	DeleteMenu(tx *sqlx.Tx, request *common.OneRequest) error
+	GetOneMenu(id *common.OneRequest) (*Menu, error)
 }
 
 type menuService struct {
@@ -39,6 +40,10 @@ func (s *menuService) UpdateMenu(tx *sqlx.Tx, menu UpdateMenuRequest) error {
 	return s.repo.UpdateMenu(tx, menu)
 }
 
-func (s *menuService) DeleteMenu(tx *sqlx.Tx, request *common.DeleteRequest) error {
+func (s *menuService) DeleteMenu(tx *sqlx.Tx, request *common.OneRequest) error {
 	return s.repo.DeleteMenu(tx, request.Id)
+}
+
+func (s *menuService) GetOneMenu(req *common.OneRequest) (*Menu, error) {
+	return s.repo.GetOneMenu(req.Id)
 }

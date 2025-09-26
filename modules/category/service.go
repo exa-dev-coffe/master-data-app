@@ -10,7 +10,7 @@ type Service interface {
 	GetListCategoriesPagination(request common.ParamsListRequest) (*response.Pagination, error)
 	GetListCategoriesNoPagination(request common.ParamsListRequest) (*[]Category, error)
 	InsertCategory(tx *sqlx.Tx, category CreateCategoryRequest) error
-	DeleteCategory(tx *sqlx.Tx, request *common.DeleteRequest) error
+	DeleteCategory(tx *sqlx.Tx, request *common.OneRequest) error
 }
 type categoryService struct {
 	repo Repository
@@ -33,6 +33,6 @@ func (s *categoryService) InsertCategory(tx *sqlx.Tx, category CreateCategoryReq
 	return s.repo.InsertCategory(tx, category)
 }
 
-func (s *categoryService) DeleteCategory(tx *sqlx.Tx, request *common.DeleteRequest) error {
+func (s *categoryService) DeleteCategory(tx *sqlx.Tx, request *common.OneRequest) error {
 	return s.repo.DeleteCategory(tx, request.Id)
 }

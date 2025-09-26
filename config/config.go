@@ -17,6 +17,12 @@ type appConfig struct {
 	Port              string
 	Env               string
 	LogLevel          string
+	MinioEndpoint     string
+	MinioAccessKey    string
+	MinioSecretKey    string
+	MinioUseSSL       bool
+	MinioBucketName   string
+	MinioBaseURL      string
 }
 
 var Config appConfig
@@ -41,6 +47,12 @@ func init() {
 		Port:              viper.GetString("APP_PORT"),
 		Env:               viper.GetString("APP_ENV"),
 		LogLevel:          viper.GetString("APP_LOG_LEVEL"),
+		MinioSecretKey:    viper.GetString("MINIO_SECRET_KEY"),
+		MinioAccessKey:    viper.GetString("MINIO_ACCESS_KEY"),
+		MinioEndpoint:     viper.GetString("MINIO_ENDPOINT"),
+		MinioUseSSL:       viper.GetBool("MINIO_USE_SSL"),
+		MinioBucketName:   viper.GetString("MINIO_BUCKET_NAME"),
+		MinioBaseURL:      viper.GetString("MINIO_BASE_URL"),
 	}
 
 	log.Printf("Config loaded: %+v\n", Config)

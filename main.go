@@ -8,7 +8,9 @@ import (
 	_ "eka-dev.com/master-data/db"
 	_ "eka-dev.com/master-data/lib"
 	"eka-dev.com/master-data/middleware"
-	"eka-dev.com/master-data/modules/Categories"
+	"eka-dev.com/master-data/modules/category"
+	"eka-dev.com/master-data/modules/menu"
+	"eka-dev.com/master-data/modules/upload"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/jmoiron/sqlx"
@@ -45,7 +47,11 @@ func initiator() {
 
 	// Initialize routes
 	// Categories
-	Categories.NewHandler(fiberApp, db.DB)
+	category.NewHandler(fiberApp, db.DB)
+	// Menu
+	menu.NewHandler(fiberApp, db.DB)
+	// Upload
+	upload.NewHandler(fiberApp)
 
 	err := fiberApp.Listen(config.Config.Port)
 	if err != nil {

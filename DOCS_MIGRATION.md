@@ -58,6 +58,17 @@ if error dirty database, you can use:
 migrate -path db/migrations -database "postgres://username:password@localhost:5432/dbname?sslmode=disable" force <version>
 ```
 
+# Or Usage in Go code for migrations create/up/down/force
+
+this list of functions is available:
+
+```go
+go run cmd/migrate/main.go create create_users_table
+go run cmd/migrate/main.go up
+go run cmd/migrate/main.go down
+go run cmd/migrate/main.go force <version>
+```
+
 
 
 

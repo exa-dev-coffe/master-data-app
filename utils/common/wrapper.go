@@ -5,8 +5,8 @@ import (
 	"strconv"
 	"strings"
 
+	"eka-dev.com/master-data/lib"
 	"eka-dev.com/master-data/middleware"
-	"eka-dev.com/master-data/utils"
 	"eka-dev.com/master-data/utils/response"
 	"github.com/gofiber/fiber/v2"
 	"github.com/jmoiron/sqlx"
@@ -127,8 +127,8 @@ func GetClaimsFromLocals(c *fiber.Ctx) (*middleware.Claims, error) {
 	return claims, nil
 }
 
-func GetDeleteRequest(c *fiber.Ctx) (*DeleteRequest, error) {
-	var request DeleteRequest
+func GetOneDataRequest(c *fiber.Ctx) (*OneRequest, error) {
+	var request OneRequest
 	err := c.QueryParser(&request)
 	if err != nil {
 		return nil, response.BadRequest("Invalid query parameters: "+err.Error(), nil)
@@ -137,7 +137,7 @@ func GetDeleteRequest(c *fiber.Ctx) (*DeleteRequest, error) {
 		return nil, response.BadRequest("Invalid id parameter", nil)
 	}
 
-	err = utils.ValidateRequest(request)
+	err = lib.ValidateRequest(request)
 
 	if err != nil {
 		return nil, err
