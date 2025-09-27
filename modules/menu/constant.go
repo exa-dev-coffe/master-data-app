@@ -1,0 +1,12 @@
+package menu
+
+const baseQuery = `SELECT m.id, m.name, m.description, m.price, m.photo, m.is_available, COALESCE(c.id, 0) AS category_id, COALESCE(c.name, 'Uncategorized') AS category_nama FROM tm_menus m
+LEFT JOIN tm_categories c ON m.category_id = c.id`
+
+var mappingFieds = map[string]string{
+	"id":            "m.id",
+	"name":          "m.name",
+	"price":         "m.price",
+	"category_name": "c.name",
+	"category_id":   "c.id",
+}

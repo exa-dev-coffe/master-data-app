@@ -14,9 +14,17 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-func BuildFilterQuery(baseQuery string, params ParamsListRequest) (string, map[string]interface{}) {
+func BuildFilterQuery(baseQuery string, params ParamsListRequest, mappingField *map[string]string) (string, map[string]interface{}) {
 	// Implementation here
 	args := map[string]interface{}{}
+	if mappingField != nil {
+		if mapped, ok := (*mappingField)[params.Search.Field]; ok {
+			params.Search.Field = mapped
+		} else {
+			log.Warn("Field", params.Search.Field, "not found in mappingField")
+			params.Search.Field = ""
+		}
+	}
 	if params.Search.Field != "" && params.Search.Value != "" {
 		if !strings.Contains(strings.ToUpper(baseQuery), "WHERE") {
 			baseQuery += " WHERE 1=1 "
@@ -36,9 +44,17 @@ func BuildFilterQuery(baseQuery string, params ParamsListRequest) (string, map[s
 	return baseQuery, args
 }
 
-func BuildCountQuery(baseQuery string, params ParamsListRequest) (string, map[string]interface{}) {
+func BuildCountQuery(baseQuery string, params ParamsListRequest, mappingField *map[string]string) (string, map[string]interface{}) {
 	// Implementation here
 	args := map[string]interface{}{}
+	if mappingField != nil {
+		if mapped, ok := (*mappingField)[params.Search.Field]; ok {
+			params.Search.Field = mapped
+		} else {
+			log.Warn("Field", params.Search.Field, "not found in mappingField")
+			params.Search.Field = ""
+		}
+	}
 	if params.Search.Field != "" && params.Search.Value != "" {
 		if !strings.Contains(strings.ToUpper(baseQuery), "WHERE") {
 			baseQuery += " WHERE  1=1 "

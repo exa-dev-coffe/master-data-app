@@ -6,7 +6,6 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-// TODO refactor getlist
 type Service interface {
 	GetListTablesPagination(request common.ParamsListRequest) (*response.Pagination, error)
 	GetListTablesNoPagination(request common.ParamsListRequest) (*[]Table, error)

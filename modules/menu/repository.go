@@ -31,9 +31,7 @@ func (r *menuRepository) GetListMenusPagination(params common.ParamsListRequest)
 	var record = make([]Menu, 0)
 
 	// here
-	baseQuery := `SELECT m.id, m.name,m.description,m.is_available,m.photo, m.price, COALESCE(c.id, 0) AS category_id, COALESCE(c.name, 'Uncategorized') AS category_name FROM tm_menus m
-	LEFT JOIN tm_categories c ON m.category_id = c.id`
-	finalQuery, args := common.BuildFilterQuery(baseQuery, params)
+	finalQuery, args := common.BuildFilterQuery(baseQuery, params, &mappingFieds)
 
 	rows, err := r.db.NamedQuery(finalQuery, args)
 	if err != nil {
@@ -60,7 +58,7 @@ func (r *menuRepository) GetListMenusPagination(params common.ParamsListRequest)
 	// get total data
 	var totalData int
 	countQuery := `SELECT COUNT(*) FROM tm_menus m`
-	countFinalQuery, countArgs := common.BuildCountQuery(countQuery, params)
+	countFinalQuery, countArgs := common.BuildCountQuery(countQuery, params, &mappingFieds)
 	countStmt, err := r.db.PrepareNamed(countFinalQuery)
 
 	if err != nil {
@@ -96,10 +94,7 @@ func (r *menuRepository) GetListMenusNoPagination(params common.ParamsListReques
 	// Implementation
 	var record = make([]Menu, 0)
 
-	baseQuery := `SELECT m.id, m.name, m.description,m.is_available,m.photo, m.price, COALESCE(c.id, 0) AS category_id, COALESCE(c.name, 'Uncategorized') AS category_name FROM tm_menus m
-	LEFT JOIN tm_categories c ON m.category_id = c.id`
-
-	finalQuery, args := common.BuildFilterQuery(baseQuery, params)
+	finalQuery, args := common.BuildFilterQuery(baseQuery, params, &mappingFieds)
 
 	rows, err := r.db.NamedQuery(finalQuery, args)
 	if err != nil {

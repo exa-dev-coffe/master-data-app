@@ -27,10 +27,8 @@ func NewTableRepository(db *sqlx.DB) Repository {
 
 func (r *tableRepository) GetListTablesPagination(params common.ParamsListRequest) (*response.Pagination, error) {
 	// Implementation
-	var record []Table
-	// here
-	baseQuery := `SELECT id, name, updated_at FROM tm_tables`
-	finalQuery, args := common.BuildFilterQuery(baseQuery, params)
+	var record = make([]Table, 0)
+	finalQuery, args := common.BuildFilterQuery(baseQuery, params, nil)
 	rows, err := r.db.NamedQuery(finalQuery, args)
 	if err != nil {
 		log.Error("Failed to execute query:", err)
@@ -54,27 +52,40 @@ func (r *tableRepository) GetListTablesPagination(params common.ParamsListReques
 	// get total data
 	var totalData int
 	countQuery := `SELECT COUNT(*) FROM tm_tables`
-	err = r.db.Get(&totalData, countQuery)
+	countFinalQuery, countArgs := common.BuildCountQuery(countQuery, params, nil)
+	countStmt, err := r.db.PrepareNamed(countFinalQuery)
+
 	if err != nil {
-		log.Error("Failed to count tables:", err)
-		return nil, response.InternalServerError("Failed to count tables", nil)
+		log.Error("Failed to prepare count statement:", err)
+		return nil, response.InternalServerError("Failed to prepare count statement", nil)
+	}
+	defer func(countStmt *sqlx.NamedStmt) {
+		err := countStmt.Close()
+		if err != nil {
+			log.Error("failed to close count statement:", err)
+			return
+		}
+	}(countStmt)
+	err = countStmt.Get(&totalData, countArgs)
+	if err != nil {
+		log.Error("Failed to get total data:", err)
+		return nil, response.InternalServerError("Failed to get total data", nil)
 	}
 	pagination := response.Pagination{
 		Data:        record,
 		TotalData:   totalData,
 		CurrentPage: params.Page,
 		PageSize:    params.Size,
-		TotalPages:  (totalData + params.Size - 1) / params.Size,
+		TotalPages:  (totalData + params.Size - 1) / params.Size, // Calculate total pages
 	}
 	return &pagination, nil
 }
 
 func (r *tableRepository) getListTablesNoPagination(params common.ParamsListRequest) (*[]Table, error) {
 	// Implementation
-	var record []Table
+	var record = make([]Table, 0)
 
-	baseQuery := `SELECT id, name, updated_at FROM tm_tables`
-	finalQuery, args := common.BuildFilterQuery(baseQuery, params)
+	finalQuery, args := common.BuildFilterQuery(baseQuery, params, nil)
 	rows, err := r.db.NamedQuery(finalQuery, args)
 	if err != nil {
 		log.Error("Failed to execute query:", err)
