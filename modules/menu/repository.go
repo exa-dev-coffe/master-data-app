@@ -2,11 +2,13 @@ package menu
 
 import (
 	"database/sql"
+	"errors"
 
 	"eka-dev.com/master-data/utils/common"
 	"eka-dev.com/master-data/utils/response"
 	"github.com/gofiber/fiber/v2/log"
 	"github.com/jmoiron/sqlx"
+	"github.com/lib/pq"
 )
 
 type Repository interface {
@@ -132,7 +134,7 @@ func (r *menuRepository) InsertMenu(tx *sqlx.Tx, model CreateMenuRequest) error 
 	_, err := tx.Exec(query, model.Name, model.Description, model.Price, model.CategoryID, model.Photo, model.CreatedBy)
 	if err != nil {
 		log.Error("Failed to insert menu:", err)
-		return response.InternalServerError("Failed to insert menu", nil)
+		return checkErrorConstraint(err, "Failed to insert menu")
 	}
 	return nil
 }
@@ -143,7 +145,7 @@ func (r *menuRepository) UpdateMenu(tx *sqlx.Tx, model UpdateMenuRequest) error 
 	info, err := tx.Exec(query, model.Name, model.Description, model.Price, model.CategoryID, model.Photo, model.IsAvailable, model.UpdatedBy, model.Id)
 	if err != nil {
 		log.Error("Failed to update menu:", err)
-		return response.InternalServerError("Failed to update menu", nil)
+		return checkErrorConstraint(err, "Failed to update menu")
 	}
 	err = validateAffectedRows(info)
 	if err != nil {
@@ -283,7 +285,7 @@ func (r *menuRepository) SetMenuCategory(tx *sqlx.Tx, model SetMenuCategory) err
 	info, err := tx.Exec(query, model.CategoryId, model.UpdatedBy, model.Id)
 	if err != nil {
 		log.Error("Failed to set menu category:", err)
-		return response.InternalServerError("Failed to set menu category", nil)
+		return checkErrorConstraint(err, "Failed to set menu category")
 	}
 	err = validateAffectedRows(info)
 	if err != nil {
@@ -294,7 +296,7 @@ func (r *menuRepository) SetMenuCategory(tx *sqlx.Tx, model SetMenuCategory) err
 
 func (r *menuRepository) GetMenusByCategoryID(categoryID int) (*[]Menu, error) {
 	var menus = make([]Menu, 0)
-	query := `SELECT m.id, m.name, m.description, m.price, m.photo, m.is_available, COALESCE(c.id, 0) AS category_id, COALESCE(c.name, 'Uncategorized') AS category_nama FROM tm_menus m
+	query := `SELECT m.id, m.name, m.description, m.price, m.photo, m.is_available, COALESCE(c.id, 0) AS category_id, COALESCE(c.name, 'Uncategorized') AS category_name FROM tm_menus m
 	LEFT JOIN tm_categories c ON m.category_id = c.id WHERE c.id=$1`
 	err := r.db.Select(&menus, query, categoryID)
 	if err != nil {
@@ -313,4 +315,18 @@ func validateAffectedRows(info sql.Result) error {
 		return response.NotFound("Menu not found", nil)
 	}
 	return nil
+}
+
+func checkErrorConstraint(err error, baseMessage string) error {
+	var pqErr *pq.Error
+	if errors.As(err, &pqErr) {
+		if msg, ok := errorConstraint[pqErr.Constraint]; ok {
+			return response.BadRequest(msg, nil)
+		}
+		// fallback kalau constraint tidak terdaftar
+		return response.InternalServerError(baseMessage, nil)
+	} else {
+		return response.InternalServerError(baseMessage, nil)
+	}
+
 }
