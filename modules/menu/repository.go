@@ -175,11 +175,11 @@ func (r *menuRepository) GetOneMenu(id int) (*Menu, error) {
 	LEFT JOIN tm_categories c ON m.category_id = c.id WHERE m.id=$1`
 	err := r.db.Get(&menu, query, id)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, response.NotFound("Menu not found", nil)
+		}
 		log.Error("Failed to get menu:", err)
 		return nil, response.InternalServerError("Failed to get menu", nil)
-	}
-	if menu.Id == 0 {
-		return nil, response.NotFound("Menu not found", nil)
 	}
 	return &menu, nil
 }
