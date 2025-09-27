@@ -1,6 +1,7 @@
 package common
 
 import (
+	"database/sql"
 	"fmt"
 	"strconv"
 	"strings"
@@ -9,6 +10,7 @@ import (
 	"eka-dev.com/master-data/middleware"
 	"eka-dev.com/master-data/utils/response"
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/log"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -144,4 +146,13 @@ func GetOneDataRequest(c *fiber.Ctx) (*OneRequest, error) {
 	}
 
 	return &request, nil
+}
+
+func GetInfoRowsAffected(result sql.Result) (int64, error) {
+	affected, err := result.RowsAffected()
+	if err != nil {
+		log.Error("Failed to get affected rows:", err)
+		return 0, response.InternalServerError("Failed to get affected rows", nil)
+	}
+	return affected, nil
 }

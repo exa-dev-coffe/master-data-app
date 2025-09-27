@@ -68,7 +68,7 @@ func RequireAuth(c *fiber.Ctx) error {
 	claims, err := validateToken(c)
 	if err != nil {
 		var appErr *response.AppError
-		if errors.As(err, appErr) {
+		if errors.As(err, &appErr) {
 			return err
 		}
 		return response.Unauthorized("Unauthorized", nil)

@@ -10,7 +10,9 @@ import (
 	"eka-dev.com/master-data/middleware"
 	"eka-dev.com/master-data/modules/category"
 	"eka-dev.com/master-data/modules/menu"
+	"eka-dev.com/master-data/modules/table"
 	"eka-dev.com/master-data/modules/upload"
+	"eka-dev.com/master-data/utils/response"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/jmoiron/sqlx"
@@ -48,10 +50,16 @@ func initiator() {
 	// Initialize routes
 	// Categories
 	category.NewHandler(fiberApp, db.DB)
-	// Menu
+	// Menus
 	menu.NewHandler(fiberApp, db.DB)
-	// Upload
+	// Uploads
 	upload.NewHandler(fiberApp)
+	// Tables
+	table.NewHandler(fiberApp, db.DB)
+
+	fiberApp.All("*", func(c *fiber.Ctx) error {
+		return c.Status(fiber.StatusNotFound).JSON(response.NotFound("Route not found", nil))
+	})
 
 	err := fiberApp.Listen(config.Config.Port)
 	if err != nil {
