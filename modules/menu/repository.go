@@ -171,7 +171,7 @@ func (r *menuRepository) DeleteMenu(tx *sqlx.Tx, id int) error {
 
 func (r *menuRepository) GetOneMenu(id int) (*Menu, error) {
 	var menu Menu
-	query := `SELECT m.id, m.name, m.description, m.price, m.photo, m.is_available, COALESCE(c.id, 0) AS category_id, COALESCE(c.name, 'Uncategorized') AS category_nama FROM tm_menus m
+	query := `SELECT m.id, m.name, m.description, m.price, m.photo, m.is_available, COALESCE(c.id, 0) AS category_id, COALESCE(c.name, 'Uncategorized') AS category_name FROM tm_menus m
 	LEFT JOIN tm_categories c ON m.category_id = c.id WHERE m.id=$1`
 	err := r.db.Get(&menu, query, id)
 	if err != nil {
