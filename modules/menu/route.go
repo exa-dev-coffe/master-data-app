@@ -98,12 +98,11 @@ func (h *handler) CreateMenu(c *fiber.Ctx) error {
 func (h *handler) UpdateMenu(c *fiber.Ctx) error {
 	var request UpdateMenuRequest
 
-	requestId, err := common.GetOneDataRequest(c)
+	err := c.BodyParser(&request)
 	if err != nil {
-		return err
+		log.Error("Error parsing request body:", err)
+		return response.BadRequest("Invalid request body", nil)
 	}
-
-	request.Id = requestId.Id
 
 	err = lib.ValidateRequest(request)
 	if err != nil {

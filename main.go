@@ -15,6 +15,7 @@ import (
 	"eka-dev.com/master-data/utils/response"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
+	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -36,6 +37,12 @@ func initiator() {
 	fiberApp := fiber.New(fiber.Config{
 		ErrorHandler: middleware.ErrorHandler,
 	})
+
+	fiberApp.Use(logger.New(logger.Config{
+		Format:     "[${time}] ${ip} ${method} ${path} - ${status}\n",
+		TimeFormat: "2006-01-02 15:04:05",
+		TimeZone:   "Asia/Jakarta",
+	}))
 
 	fiberApp.Get("/health", func(c *fiber.Ctx) error {
 		return c.SendString("OK")

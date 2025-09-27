@@ -2,6 +2,7 @@ package lib
 
 import (
 	"errors"
+	"fmt"
 	"mime/multipart"
 
 	"eka-dev.com/master-data/utils/response"
@@ -33,15 +34,21 @@ func validateStruct(s interface{}) error {
 func validationMessage(e validator.FieldError) string {
 	switch e.Tag() {
 	case "required":
-		return "is required"
+		return fmt.Sprintf("%s is required", e.Field())
 	case "email":
-		return "must be a valid email"
+		return "is not a valid email"
 	case "min":
-		return "must be at least " + e.Param() + " characters"
+		return fmt.Sprintf("%s must be at least %s characters", e.Field(), e.Param())
 	case "max":
-		return "must be at most " + e.Param() + " characters"
+		return fmt.Sprintf("%s must be at most %s characters", e.Field(), e.Param())
+	case "gte":
+		return fmt.Sprintf("%s must be greater than or equal to %s", e.Field(), e.Param())
+	case "lte":
+		return fmt.Sprintf("%s must be less than or equal to %s", e.Field(), e.Param())
+	case "oneof":
+		return fmt.Sprintf("%s must be one of [%s]", e.Field(), e.Param())
 	default:
-		return "failed on " + e.Tag()
+		return fmt.Sprintf("%s is not valid", e.Field())
 	}
 }
 

@@ -1,6 +1,8 @@
 package menu
 
 import (
+	"database/sql"
+
 	"eka-dev.com/master-data/utils/common"
 	"eka-dev.com/master-data/utils/response"
 	"github.com/gofiber/fiber/v2/log"
@@ -26,11 +28,11 @@ func NewMenuRepository(db *sqlx.DB) Repository {
 
 func (r *menuRepository) GetListMenusPagination(params common.ParamsListRequest) (*response.Pagination, error) {
 	// Implementation
-	var record []Menu
+	var record = make([]Menu, 0)
 
 	// here
-	baseQuery := `SELECT m.id, m.name, m.name, m.price, COALESCE(c.id, 0) AS category_id, COALESCE(c.name, 'Uncategorized') AS category_nama FROM tm_menus m
-	JOIN tm_categories c ON m.category_id = c.id`
+	baseQuery := `SELECT m.id, m.name,m.description,m.is_available,m.photo, m.price, COALESCE(c.id, 0) AS category_id, COALESCE(c.name, 'Uncategorized') AS category_name FROM tm_menus m
+	LEFT JOIN tm_categories c ON m.category_id = c.id`
 	finalQuery, args := common.BuildFilterQuery(baseQuery, params)
 
 	rows, err := r.db.NamedQuery(finalQuery, args)
@@ -58,8 +60,8 @@ func (r *menuRepository) GetListMenusPagination(params common.ParamsListRequest)
 	// get total data
 	var totalData int
 	countQuery := `SELECT COUNT(*) FROM tm_menus m`
-	countFInalQuery, countArgs := common.BuildCountQuery(countQuery, params)
-	countStmt, err := r.db.PrepareNamed(countFInalQuery)
+	countFinalQuery, countArgs := common.BuildCountQuery(countQuery, params)
+	countStmt, err := r.db.PrepareNamed(countFinalQuery)
 
 	if err != nil {
 		log.Error("Failed to prepare count query:", err)
@@ -92,10 +94,10 @@ func (r *menuRepository) GetListMenusPagination(params common.ParamsListRequest)
 
 func (r *menuRepository) GetListMenusNoPagination(params common.ParamsListRequest) (*[]Menu, error) {
 	// Implementation
-	var record []Menu
+	var record = make([]Menu, 0)
 
-	baseQuery := `SELECT m.id, m.name, m.name, m.price, COALESCE(c.id, 0) AS category_id, COALESCE(c.name, 'Uncategorized') AS category_nama FROM tm_menus m
-	JOIN tm_categories c ON m.category_id = c.id`
+	baseQuery := `SELECT m.id, m.name, m.description,m.is_available,m.photo, m.price, COALESCE(c.id, 0) AS category_id, COALESCE(c.name, 'Uncategorized') AS category_name FROM tm_menus m
+	LEFT JOIN tm_categories c ON m.category_id = c.id`
 
 	finalQuery, args := common.BuildFilterQuery(baseQuery, params)
 
@@ -139,10 +141,14 @@ func (r *menuRepository) InsertMenu(tx *sqlx.Tx, model CreateMenuRequest) error 
 func (r *menuRepository) UpdateMenu(tx *sqlx.Tx, model UpdateMenuRequest) error {
 	// Implementation
 	query := `UPDATE tm_menus SET name=$1, description=$2, price=$3, category_id=$4, photo=$5, is_available=$6, updated_by=$7 WHERE id=$8`
-	_, err := tx.Exec(query, model.Name, model.Description, model.Price, model.CategoryID, model.Photo, model.IsAvailable, model.UpdatedBy, model.Id)
+	info, err := tx.Exec(query, model.Name, model.Description, model.Price, model.CategoryID, model.Photo, model.IsAvailable, model.UpdatedBy, model.Id)
 	if err != nil {
 		log.Error("Failed to update menu:", err)
 		return response.InternalServerError("Failed to update menu", nil)
+	}
+	err = validateAffectedRows(info)
+	if err != nil {
+		return err
 	}
 	return nil
 }
@@ -150,18 +156,14 @@ func (r *menuRepository) UpdateMenu(tx *sqlx.Tx, model UpdateMenuRequest) error 
 func (r *menuRepository) DeleteMenu(tx *sqlx.Tx, id int) error {
 	// Implementation
 	query := `DELETE FROM tm_menus WHERE id = $1`
-	row, err := tx.Exec(query, id)
+	info, err := tx.Exec(query, id)
 	if err != nil {
 		log.Error("Failed to delete menu:", err)
 		return response.InternalServerError("Failed to delete menu", nil)
 	}
-	affected, err := row.RowsAffected()
+	err = validateAffectedRows(info)
 	if err != nil {
-		log.Error("Failed to get affected rows:", err)
-		return response.InternalServerError("Failed to get affected rows", nil)
-	}
-	if affected == 0 {
-		return response.NotFound("Menu not found", nil)
+		return err
 	}
 	return nil
 }
@@ -169,7 +171,7 @@ func (r *menuRepository) DeleteMenu(tx *sqlx.Tx, id int) error {
 func (r *menuRepository) GetOneMenu(id int) (*Menu, error) {
 	var menu Menu
 	query := `SELECT m.id, m.name, m.description, m.price, m.photo, m.is_available, COALESCE(c.id, 0) AS category_id, COALESCE(c.name, 'Uncategorized') AS category_nama FROM tm_menus m
-	JOIN tm_categories c ON m.category_id = c.id WHERE m.id=$1`
+	LEFT JOIN tm_categories c ON m.category_id = c.id WHERE m.id=$1`
 	err := r.db.Get(&menu, query, id)
 	if err != nil {
 		log.Error("Failed to get menu:", err)
@@ -179,4 +181,15 @@ func (r *menuRepository) GetOneMenu(id int) (*Menu, error) {
 		return nil, response.NotFound("Menu not found", nil)
 	}
 	return &menu, nil
+}
+
+func validateAffectedRows(info sql.Result) error {
+	affected, err := common.GetInfoRowsAffected(info)
+	if err != nil {
+		return err
+	}
+	if affected == 0 {
+		return response.NotFound("Menu not found", nil)
+	}
+	return nil
 }
