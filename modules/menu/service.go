@@ -13,6 +13,10 @@ type Service interface {
 	UpdateMenu(tx *sqlx.Tx, menu UpdateMenuRequest) error
 	DeleteMenu(tx *sqlx.Tx, request *common.OneRequest) error
 	GetOneMenu(id *common.OneRequest) (*Menu, error)
+	GetListMenusUncategorizedNoPagination(request common.ParamsListRequest) (*[]Menu, error)
+	GetListMenusUncategorizedPagination(request common.ParamsListRequest) (*response.Pagination, error)
+	SetMenuCategory(tx *sqlx.Tx, model SetMenuCategory) error
+	GetMenusByCategoryID(categoryID int) (*[]Menu, error)
 }
 
 type menuService struct {
@@ -46,4 +50,20 @@ func (s *menuService) DeleteMenu(tx *sqlx.Tx, request *common.OneRequest) error 
 
 func (s *menuService) GetOneMenu(req *common.OneRequest) (*Menu, error) {
 	return s.repo.GetOneMenu(req.Id)
+}
+
+func (s *menuService) GetListMenusUncategorizedNoPagination(request common.ParamsListRequest) (*[]Menu, error) {
+	return s.repo.GetListMenusUncategorizedNoPagination(request)
+}
+
+func (s *menuService) GetListMenusUncategorizedPagination(request common.ParamsListRequest) (*response.Pagination, error) {
+	return s.repo.GetListMenusUncategorizedPagination(request)
+}
+
+func (s *menuService) SetMenuCategory(tx *sqlx.Tx, model SetMenuCategory) error {
+	return s.repo.SetMenuCategory(tx, model)
+}
+
+func (s *menuService) GetMenusByCategoryID(categoryID int) (*[]Menu, error) {
+	return s.repo.GetMenusByCategoryID(categoryID)
 }

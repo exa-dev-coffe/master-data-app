@@ -16,6 +16,9 @@ type Handler interface {
 	UpdateMenu(c *fiber.Ctx) error
 	DeleteMenu(c *fiber.Ctx) error
 	GetOneMenu(c *fiber.Ctx) error
+	GetMenusUncategorized(c *fiber.Ctx) error
+	SetMenuCategory(c *fiber.Ctx) error
+	GetMenusByCategoryID(c *fiber.Ctx) error
 }
 
 type handler struct {
@@ -35,6 +38,9 @@ func NewHandler(app *fiber.App, db *sqlx.DB) Handler {
 	routes.Put("", middleware.RequireRole("admin"), handler.UpdateMenu)
 	routes.Delete("", middleware.RequireRole("admin"), handler.DeleteMenu)
 	routes.Get("/detail", handler.GetOneMenu)
+	routes.Get("/uncategorized", middleware.RequireRole("admin"), handler.GetMenusUncategorized)
+	routes.Put("/set-category", middleware.RequireRole("admin"), handler.SetMenuCategory)
+	routes.Get("/by-category", handler.GetMenusByCategoryID)
 
 	return handler
 }
@@ -151,4 +157,74 @@ func (h *handler) GetOneMenu(c *fiber.Ctx) error {
 	}
 
 	return c.Status(fiber.StatusOK).JSON(response.Success("Success", menu))
+}
+
+func (h *handler) GetMenusUncategorized(c *fiber.Ctx) error {
+	// parsing query params
+	queryParams := c.Queries()
+	var paramsListRequest common.ParamsListRequest
+	err := common.ParseQueryParams(queryParams, &paramsListRequest)
+	if err != nil {
+		return err
+	}
+
+	err = lib.ValidateRequest(paramsListRequest)
+	if err != nil {
+		return err
+	}
+
+	var records interface{}
+	if paramsListRequest.NoPaginate {
+		records, err = h.service.GetListMenusUncategorizedNoPagination(paramsListRequest)
+	} else {
+		records, err = h.service.GetListMenusUncategorizedPagination(paramsListRequest)
+	}
+
+	if err != nil {
+		return err
+	}
+
+	return c.Status(fiber.StatusOK).JSON(response.Success("Success", records))
+}
+
+func (h *handler) SetMenuCategory(c *fiber.Ctx) error {
+	var request SetMenuCategory
+	err := c.BodyParser(&request)
+	if err != nil {
+		log.Error("Error parsing request body: ", err)
+		return response.BadRequest("Invalid request body", err)
+	}
+
+	err = lib.ValidateRequest(request)
+	if err != nil {
+		return err
+	}
+
+	claims, err := common.GetClaimsFromLocals(c)
+	if err != nil {
+		return err
+	}
+
+	request.UpdatedBy = claims.UserId
+
+	err = common.WithTransaction[SetMenuCategory](h.db, h.service.SetMenuCategory, request)
+	if err != nil {
+		return err
+	}
+
+	return c.Status(fiber.StatusOK).JSON(response.Success("Menu category set successfully", nil))
+}
+
+func (h *handler) GetMenusByCategoryID(c *fiber.Ctx) error {
+	request, err := common.GetOneDataRequest(c)
+	if err != nil {
+		return err
+	}
+
+	menus, err := h.service.GetMenusByCategoryID(request.Id)
+	if err != nil {
+		return err
+	}
+
+	return c.Status(fiber.StatusOK).JSON(response.Success("Success", menus))
 }

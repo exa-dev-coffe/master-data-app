@@ -121,8 +121,8 @@ func (r *categoryRepository) GetListCategoriesNoPagination(params common.ParamsL
 
 func (r *categoryRepository) InsertCategory(tx *sqlx.Tx, model CreateCategoryRequest) error {
 	// Implementation here
-	query := `INSERT INTO tm_categories (name) VALUES ($1)`
-	_, err := tx.Exec(query, model.Name)
+	query := `INSERT INTO tm_categories (name, created_by) VALUES ($1, $2)`
+	_, err := tx.Exec(query, model.Name, model.CreatedBy)
 	if err != nil {
 		log.Error("Failed to insert category:", err)
 		return response.InternalServerError("Failed to insert category", nil)
