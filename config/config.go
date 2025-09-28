@@ -54,6 +54,4 @@ func init() {
 		MinioBucketName:   viper.GetString("MINIO_BUCKET_NAME"),
 		MinioBaseURL:      viper.GetString("MINIO_BASE_URL"),
 	}
-
-	log.Printf("Config loaded: %+v\n", Config)
 }
