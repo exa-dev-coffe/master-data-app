@@ -5,6 +5,9 @@ import (
 
 	"eka-dev.com/master-data/config"
 	"eka-dev.com/master-data/utils/constant"
+	"github.com/golang-migrate/migrate/v4"
+	"github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 )
@@ -38,4 +41,23 @@ func init() {
 	log.Println("Database connection established")
 
 	DB = DB
+	// === Run migrations ===
+	driver, err := postgres.WithInstance(DB.DB, &postgres.Config{})
+	if err != nil {
+		log.Fatalln("Failed to create migration driver:", err)
+	}
+
+	m, err := migrate.NewWithDatabaseInstance(
+		"file://db/migrations", // path ke folder migrations kamu
+		"postgres", driver,
+	)
+	if err != nil {
+		log.Fatalln("Failed to init migrations:", err)
+	}
+
+	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
+		log.Fatalln("Migration failed:", err)
+	}
+
+	log.Println("Migrations applied successfully")
 }
