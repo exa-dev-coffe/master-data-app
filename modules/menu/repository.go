@@ -90,6 +90,7 @@ func (r *menuRepository) GetListMenusPagination(params common.ParamsListRequest)
 		CurrentPage: params.Page,
 		PageSize:    params.Size,
 		TotalPages:  (totalData + params.Size - 1) / params.Size,
+		LastPage:    params.Page >= (totalData+params.Size-1)/params.Size,
 	}
 
 	return &pagination, nil
@@ -274,6 +275,7 @@ func (r *menuRepository) GetListMenusUncategorizedPagination(params common.Param
 		CurrentPage: params.Page,
 		PageSize:    params.Size,
 		TotalPages:  (totalData + params.Size - 1) / params.Size,
+		LastPage:    params.Page >= (totalData+params.Size-1)/params.Size,
 	}
 
 	return &pagination, nil
