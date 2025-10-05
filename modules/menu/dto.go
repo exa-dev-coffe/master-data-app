@@ -26,6 +26,12 @@ type SetMenuCategory struct {
 	UpdatedBy  int64 `db:"updated_by" json:"updatedBy"`
 }
 
+type UpdateMenuAvailabilityRequest struct {
+	Id          int   `json:"id" validate:"required"`
+	IsAvailable bool  `json:"isAvailable" validate:"required"`
+	UpdatedBy   int64 `json:"updatedBy"`
+}
+
 type Menu struct {
 	Id           int64   `db:"id" json:"id"`
 	Name         string  `db:"name" json:"name"`

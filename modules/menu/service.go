@@ -17,6 +17,7 @@ type Service interface {
 	GetListMenusUncategorizedPagination(request common.ParamsListRequest) (*response.Pagination, error)
 	SetMenuCategory(tx *sqlx.Tx, model SetMenuCategory) error
 	GetMenusByCategoryID(categoryID int) (*[]Menu, error)
+	UpdateMenuAvailability(tx *sqlx.Tx, model UpdateMenuAvailabilityRequest) error
 }
 
 type menuService struct {
@@ -66,4 +67,8 @@ func (s *menuService) SetMenuCategory(tx *sqlx.Tx, model SetMenuCategory) error 
 
 func (s *menuService) GetMenusByCategoryID(categoryID int) (*[]Menu, error) {
 	return s.repo.GetMenusByCategoryID(categoryID)
+}
+
+func (s *menuService) UpdateMenuAvailability(tx *sqlx.Tx, model UpdateMenuAvailabilityRequest) error {
+	return s.repo.UpdateMenuAvailability(tx, model.Id, model.IsAvailable, model.UpdatedBy)
 }

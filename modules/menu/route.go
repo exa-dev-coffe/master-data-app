@@ -19,6 +19,7 @@ type Handler interface {
 	GetMenusUncategorized(c *fiber.Ctx) error
 	SetMenuCategory(c *fiber.Ctx) error
 	GetMenusByCategoryID(c *fiber.Ctx) error
+	UpdateMenuAvailability(c *fiber.Ctx) error
 }
 
 type handler struct {
@@ -41,7 +42,7 @@ func NewHandler(app *fiber.App, db *sqlx.DB) Handler {
 	routes.Get("/uncategorized", middleware.RequireRole("admin"), handler.GetMenusUncategorized)
 	routes.Patch("/set-category", middleware.RequireRole("admin"), handler.SetMenuCategory)
 	routes.Get("/by-category", handler.GetMenusByCategoryID)
-
+	routes.Patch("/availability", middleware.RequireRole("admin"), handler.UpdateMenuAvailability)
 	return handler
 }
 
@@ -227,4 +228,31 @@ func (h *handler) GetMenusByCategoryID(c *fiber.Ctx) error {
 	}
 
 	return c.Status(fiber.StatusOK).JSON(response.Success("Success", menus))
+}
+
+func (h *handler) UpdateMenuAvailability(c *fiber.Ctx) error {
+	var request UpdateMenuAvailabilityRequest
+	err := c.BodyParser(&request)
+	if err != nil {
+		log.Error("Error parsing request body: ", err)
+		return response.BadRequest("Invalid request body", err)
+	}
+
+	err = lib.ValidateRequest(request)
+	if err != nil {
+		return err
+	}
+
+	claims, err := common.GetClaimsFromLocals(c)
+	if err != nil {
+		return err
+	}
+
+	request.UpdatedBy = claims.UserId
+
+	err = common.WithTransaction[UpdateMenuAvailabilityRequest](h.db, h.service.UpdateMenuAvailability, request)
+	if err != nil {
+		return err
+	}
+	return c.Status(fiber.StatusOK).JSON(response.Success("Menu availability updated successfully", nil))
 }
