@@ -42,7 +42,7 @@ func NewHandler(app *fiber.App, db *sqlx.DB) Handler {
 	routes.Get("/uncategorized", middleware.RequireRole("admin"), handler.GetMenusUncategorized)
 	routes.Patch("/set-category", middleware.RequireRole("admin"), handler.SetMenuCategory)
 	routes.Get("/by-category", handler.GetMenusByCategoryID)
-	routes.Patch("/availability", middleware.RequireRole("admin"), handler.UpdateMenuAvailability)
+	routes.Patch("/availability", middleware.RequireRole("admin", "barista"), handler.UpdateMenuAvailability)
 	return handler
 }
 
