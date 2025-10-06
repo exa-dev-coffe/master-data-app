@@ -27,7 +27,7 @@ func (r *categoryRepository) GetListCategoriesPagination(params common.ParamsLis
 	var record []Category
 
 	// here
-	finalQuery, args := common.BuildFilterQuery(baseQuery, params, nil)
+	finalQuery, args := common.BuildFilterQuery(baseQuery, params, nil, &mappingFieldType)
 
 	rows, err := r.db.NamedQuery(finalQuery, args)
 	if err != nil {
@@ -54,7 +54,7 @@ func (r *categoryRepository) GetListCategoriesPagination(params common.ParamsLis
 	// get total data
 	var totalData int
 	countQuery := `SELECT COUNT(*) FROM tm_categories`
-	countFinalQuery, countArgs := common.BuildCountQuery(countQuery, params, nil)
+	countFinalQuery, countArgs := common.BuildCountQuery(countQuery, params, nil, &mappingFieldType)
 	countStmt, err := r.db.PrepareNamed(countFinalQuery)
 
 	if err != nil {
@@ -93,7 +93,7 @@ func (r *categoryRepository) GetListCategoriesNoPagination(params common.ParamsL
 	// here
 	baseQuery := `SELECT id, name FROM tm_categories`
 
-	finalQuery, args := common.BuildFilterQuery(baseQuery, params, nil)
+	finalQuery, args := common.BuildFilterQuery(baseQuery, params, nil, &mappingFieldType)
 
 	rows, err := r.db.NamedQuery(finalQuery, args)
 	if err != nil {

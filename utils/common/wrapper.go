@@ -14,53 +14,148 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-func BuildFilterQuery(baseQuery string, params ParamsListRequest, mappingField *map[string]string) (string, map[string]interface{}) {
+func BuildFilterQuery(baseQuery string, params ParamsListRequest, mappingField *map[string]string, mappingFieldType *map[string]string) (string, map[string]interface{}) {
 	// Implementation here
 	args := map[string]interface{}{}
 	if mappingField != nil {
-		if mapped, ok := (*mappingField)[params.Search.Field]; ok {
-			params.Search.Field = mapped
-		} else {
-			log.Warn("Field", params.Search.Field, "not found in mappingField")
-			params.Search.Field = ""
+		for i, field := range params.Search.Field {
+			if mapped, ok := (*mappingField)[field]; ok {
+				params.Search.Field[i] = mapped
+			} else {
+				log.Warn("Field", params.Search.Field, "not found in mappingField")
+				params.Search.Field[i] = ""
+			}
 		}
 	}
-	if params.Search.Field != "" && params.Search.Value != "" {
-		if !strings.Contains(strings.ToUpper(baseQuery), "WHERE") {
-			baseQuery += " WHERE 1=1 "
+
+	filteredField := []string{}
+	for _, field := range params.Search.Field {
+		if field != "" {
+			filteredField = append(filteredField, field)
 		}
-		baseQuery += fmt.Sprintf(" AND %s ILIKE :searchValue", params.Search.Field)
-		args["searchValue"] = "%" + params.Search.Value + "%"
+	}
+	if len(filteredField) > 0 && len(filteredField) == len(params.Search.Value) {
+		if !strings.Contains(strings.ToUpper(baseQuery), "WHERE") {
+			baseQuery += " WHERE  1=1 "
+		}
+		for i, field := range filteredField {
+			if params.Search.Value[i] != "" {
+				if mappingFieldType != nil {
+					if fieldType, ok := (*mappingFieldType)[field]; ok {
+						switch fieldType {
+						case "string":
+							baseQuery += fmt.Sprintf(" AND CAST(%s AS TEXT) ILIKE :searchValue%d ", field, i)
+							args[fmt.Sprintf("searchValue%d", i)] = "%" + params.Search.Value[i] + "%"
+						case "int":
+							intValue, err := strconv.Atoi(params.Search.Value[i])
+							if err != nil {
+								log.Warnf("Invalid int value for field %s: %v", field, err)
+								continue
+							}
+							baseQuery += fmt.Sprintf(" AND %s = :searchValue%d ", field, i)
+							args[fmt.Sprintf("searchValue%d", i)] = intValue
+						case "float":
+							floatValue, err := strconv.ParseFloat(params.Search.Value[i], 64)
+							if err != nil {
+								log.Warnf("Invalid float value for field %s: %v", field, err)
+								continue
+							}
+							baseQuery += fmt.Sprintf(" AND %s = :searchValue%d ", field, i)
+							args[fmt.Sprintf("searchValue%d", i)] = floatValue
+						case "bool":
+							boolValue, err := strconv.ParseBool(params.Search.Value[i])
+							if err != nil {
+								log.Warnf("Invalid bool value for field %s: %v", field, err)
+								continue
+							}
+							baseQuery += fmt.Sprintf(" AND %s = :searchValue%d ", field, i)
+							args[fmt.Sprintf("searchValue%d", i)] = boolValue
+						default:
+							// default to string if type is unknown
+							baseQuery += fmt.Sprintf(" AND CAST(%s AS TEXT) ILIKE :searchValue%d ", field, i)
+							args[fmt.Sprintf("searchValue%d", i)] = "%" + params.Search.Value[i] + "%"
+						}
+					}
+				}
+			}
+		}
 	}
 	if params.Sort.Order != "" && params.Sort.Field != "" {
 		baseQuery += fmt.Sprintf(" ORDER BY %s %s ", params.Sort.Field, strings.ToUpper(params.Sort.Order))
 	}
 	if params.Size > 0 && params.Page > 0 && !params.NoPaginate {
 		offset := (params.Page - 1) * params.Size
-		baseQuery += "LIMIT :size OFFSET :offset"
+		baseQuery += " LIMIT :size OFFSET :offset "
 		args["size"] = params.Size
 		args["offset"] = offset
 	}
 	return baseQuery, args
 }
 
-func BuildCountQuery(baseQuery string, params ParamsListRequest, mappingField *map[string]string) (string, map[string]interface{}) {
+func BuildCountQuery(baseQuery string, params ParamsListRequest, mappingField *map[string]string, mappingFieldType *map[string]string) (string, map[string]interface{}) {
 	// Implementation here
 	args := map[string]interface{}{}
 	if mappingField != nil {
-		if mapped, ok := (*mappingField)[params.Search.Field]; ok {
-			params.Search.Field = mapped
-		} else {
-			log.Warn("Field", params.Search.Field, "not found in mappingField")
-			params.Search.Field = ""
+		for i, field := range params.Search.Field {
+			if mapped, ok := (*mappingField)[field]; ok {
+				params.Search.Field[i] = mapped
+			} else {
+				log.Warn("Field", params.Search.Field, "not found in mappingField")
+				params.Search.Field[i] = ""
+			}
 		}
 	}
-	if params.Search.Field != "" && params.Search.Value != "" {
+	filteredField := []string{}
+	for _, field := range params.Search.Field {
+		if field != "" {
+			filteredField = append(filteredField, field)
+		}
+	}
+	if len(filteredField) > 0 && len(filteredField) == len(params.Search.Value) {
 		if !strings.Contains(strings.ToUpper(baseQuery), "WHERE") {
 			baseQuery += " WHERE  1=1 "
 		}
-		baseQuery += fmt.Sprintf(" AND %s ILIKE :searchValue", params.Search.Field)
-		args["searchValue"] = "%" + params.Search.Value + "%"
+		for i, field := range filteredField {
+			if params.Search.Value[i] != "" {
+				if mappingFieldType != nil {
+					if fieldType, ok := (*mappingFieldType)[field]; ok {
+						switch fieldType {
+						case "string":
+							baseQuery += fmt.Sprintf(" AND CAST(%s AS TEXT) ILIKE :searchValue%d ", field, i)
+							args[fmt.Sprintf("searchValue%d", i)] = "%" + params.Search.Value[i] + "%"
+						case "int":
+							intValue, err := strconv.Atoi(params.Search.Value[i])
+							if err != nil {
+								log.Warnf("Invalid int value for field %s: %v", field, err)
+								continue
+							}
+							baseQuery += fmt.Sprintf(" AND %s = :searchValue%d ", field, i)
+							args[fmt.Sprintf("searchValue%d", i)] = intValue
+						case "float":
+							floatValue, err := strconv.ParseFloat(params.Search.Value[i], 64)
+							if err != nil {
+								log.Warnf("Invalid float value for field %s: %v", field, err)
+								continue
+							}
+							baseQuery += fmt.Sprintf(" AND %s = :searchValue%d ", field, i)
+							args[fmt.Sprintf("searchValue%d", i)] = floatValue
+						case "bool":
+							boolValue, err := strconv.ParseBool(params.Search.Value[i])
+							if err != nil {
+								log.Warnf("Invalid bool value for field %s: %v", field, err)
+								continue
+							}
+							baseQuery += fmt.Sprintf(" AND %s = :searchValue%d ", field, i)
+							args[fmt.Sprintf("searchValue%d", i)] = boolValue
+						default:
+							// default to string if type is unknown
+							baseQuery += fmt.Sprintf(" AND CAST(%s AS TEXT) ILIKE :searchValue%d ", field, i)
+							args[fmt.Sprintf("searchValue%d", i)] = "%" + params.Search.Value[i] + "%"
+						}
+					}
+				}
+			}
+		}
 	}
 	return baseQuery, args
 }
@@ -95,10 +190,10 @@ func ParseQueryParams(queryParams map[string]string, params *ParamsListRequest) 
 		params.Sort.Order = "DESC" // default sort order
 	}
 	if searchField, ok := queryParams["searchKey"]; ok {
-		params.Search.Field = searchField
+		params.Search.Field = strings.Split(searchField, ",")
 	}
 	if searchValue, ok := queryParams["searchValue"]; ok {
-		params.Search.Value = searchValue
+		params.Search.Value = strings.Split(searchValue, ",")
 	}
 	if noPaginate, ok := queryParams["noPaginate"]; ok {
 		if noPaginate == "true" {

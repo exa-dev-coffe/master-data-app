@@ -8,8 +8,8 @@ type ParamsListRequest struct {
 	NoPaginate bool
 }
 type Search struct {
-	Field string
-	Value string
+	Field []string
+	Value []string
 }
 
 type Sort struct {

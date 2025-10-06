@@ -28,7 +28,7 @@ func NewTableRepository(db *sqlx.DB) Repository {
 func (r *tableRepository) GetListTablesPagination(params common.ParamsListRequest) (*response.Pagination, error) {
 	// Implementation
 	var record = make([]Table, 0)
-	finalQuery, args := common.BuildFilterQuery(baseQuery, params, nil)
+	finalQuery, args := common.BuildFilterQuery(baseQuery, params, nil, &mappingFieldType)
 	rows, err := r.db.NamedQuery(finalQuery, args)
 	if err != nil {
 		log.Error("Failed to execute query:", err)
@@ -52,7 +52,7 @@ func (r *tableRepository) GetListTablesPagination(params common.ParamsListReques
 	// get total data
 	var totalData int
 	countQuery := `SELECT COUNT(*) FROM tm_tables`
-	countFinalQuery, countArgs := common.BuildCountQuery(countQuery, params, nil)
+	countFinalQuery, countArgs := common.BuildCountQuery(countQuery, params, nil, &mappingFieldType)
 	countStmt, err := r.db.PrepareNamed(countFinalQuery)
 
 	if err != nil {
@@ -86,7 +86,7 @@ func (r *tableRepository) getListTablesNoPagination(params common.ParamsListRequ
 	// Implementation
 	var record = make([]Table, 0)
 
-	finalQuery, args := common.BuildFilterQuery(baseQuery, params, nil)
+	finalQuery, args := common.BuildFilterQuery(baseQuery, params, nil, &mappingFieldType)
 	rows, err := r.db.NamedQuery(finalQuery, args)
 	if err != nil {
 		log.Error("Failed to execute query:", err)

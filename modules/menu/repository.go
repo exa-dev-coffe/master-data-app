@@ -38,7 +38,7 @@ func (r *menuRepository) GetListMenusPagination(params common.ParamsListRequest)
 	var record = make([]Menu, 0)
 
 	// here
-	finalQuery, args := common.BuildFilterQuery(baseQuery, params, &mappingFieds)
+	finalQuery, args := common.BuildFilterQuery(baseQuery, params, &mappingFieds, &mappingFieldType)
 
 	rows, err := r.db.NamedQuery(finalQuery, args)
 	if err != nil {
@@ -65,7 +65,7 @@ func (r *menuRepository) GetListMenusPagination(params common.ParamsListRequest)
 	// get total data
 	var totalData int
 	countQuery := `SELECT COUNT(*) FROM tm_menus m`
-	countFinalQuery, countArgs := common.BuildCountQuery(countQuery, params, &mappingFieds)
+	countFinalQuery, countArgs := common.BuildCountQuery(countQuery, params, &mappingFieds, &mappingFieldType)
 	countStmt, err := r.db.PrepareNamed(countFinalQuery)
 
 	if err != nil {
@@ -102,7 +102,7 @@ func (r *menuRepository) GetListMenusNoPagination(params common.ParamsListReques
 	// Implementation
 	var record = make([]Menu, 0)
 
-	finalQuery, args := common.BuildFilterQuery(baseQuery, params, &mappingFieds)
+	finalQuery, args := common.BuildFilterQuery(baseQuery, params, &mappingFieds, &mappingFieldType)
 
 	rows, err := r.db.NamedQuery(finalQuery, args)
 	if err != nil {
@@ -190,7 +190,7 @@ func (r *menuRepository) GetListMenusUncategorizedNoPagination(params common.Par
 	// Implementation
 	var record = make([]Menu, 0)
 
-	finalQuery, args := common.BuildFilterQuery(baseQueryUncategorized, params, &mappingFieds)
+	finalQuery, args := common.BuildFilterQuery(baseQueryUncategorized, params, &mappingFieds, &mappingFieldType)
 
 	rows, err := r.db.NamedQuery(finalQuery, args)
 
@@ -223,7 +223,7 @@ func (r *menuRepository) GetListMenusUncategorizedPagination(params common.Param
 	// Implementation
 	var record = make([]Menu, 0)
 
-	finalQuery, args := common.BuildFilterQuery(baseQueryUncategorized, params, &mappingFieds)
+	finalQuery, args := common.BuildFilterQuery(baseQueryUncategorized, params, &mappingFieds, &mappingFieldType)
 
 	rows, err := r.db.NamedQuery(finalQuery, args)
 	if err != nil {
@@ -250,7 +250,7 @@ func (r *menuRepository) GetListMenusUncategorizedPagination(params common.Param
 	// get total data
 	var totalData int
 	countQuery := `SELECT COUNT(*) FROM tm_menus m LEFT JOIN tm_categories c ON m.category_id = c.id WHERE c.id IS NULL`
-	countFinalQuery, countArgs := common.BuildCountQuery(countQuery, params, &mappingFieds)
+	countFinalQuery, countArgs := common.BuildCountQuery(countQuery, params, &mappingFieds, &mappingFieldType)
 	countStmt, err := r.db.PrepareNamed(countFinalQuery)
 
 	if err != nil {

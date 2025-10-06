@@ -17,3 +17,11 @@ var mappingFieds = map[string]string{
 var errorConstraint = map[string]string{
 	"tm_menus_category_id_fkey": "Category not found",
 }
+
+var mappingFieldType = map[string]string{
+	"m.id":    "int",
+	"m.name":  "string",
+	"m.price": "int",
+	"c.name":  "string",
+	"c.id":    "int",
+}
