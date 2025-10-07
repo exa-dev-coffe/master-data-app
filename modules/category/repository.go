@@ -24,7 +24,7 @@ func NewCategoryRepository(db *sqlx.DB) Repository {
 
 func (r *categoryRepository) GetListCategoriesPagination(params common.ParamsListRequest) (*response.Pagination, error) {
 	// Implementation
-	var record []Category
+	var record = make([]Category, 0)
 
 	// here
 	finalQuery, args := common.BuildFilterQuery(baseQuery, params, nil, &mappingFieldType)
@@ -88,7 +88,7 @@ func (r *categoryRepository) GetListCategoriesPagination(params common.ParamsLis
 }
 
 func (r *categoryRepository) GetListCategoriesNoPagination(params common.ParamsListRequest) (*[]Category, error) {
-	var record []Category
+	var record = make([]Category, 0)
 
 	// here
 	baseQuery := `SELECT id, name FROM tm_categories`
