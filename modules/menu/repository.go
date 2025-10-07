@@ -132,8 +132,8 @@ func (r *menuRepository) GetListMenusNoPagination(params common.ParamsListReques
 
 func (r *menuRepository) InsertMenu(tx *sqlx.Tx, model CreateMenuRequest) error {
 	// Implementation
-	query := `INSERT INTO tm_menus ( name, description, price, category_id, photo, created_by) VALUES ( $1, $2, $3, $4, $5, $6)`
-	_, err := tx.Exec(query, model.Name, model.Description, model.Price, model.CategoryID, model.Photo, model.CreatedBy)
+	query := `INSERT INTO tm_menus ( name, description, price, category_id, photo, is_available, created_by) VALUES ( $1, $2, $3, $4, $5, $6, $7)`
+	_, err := tx.Exec(query, model.Name, model.Description, model.Price, model.CategoryID, model.Photo, model.IsAvailable, model.CreatedBy)
 	if err != nil {
 		log.Error("Failed to insert menu:", err)
 		return checkErrorConstraint(err, "Failed to insert menu")
