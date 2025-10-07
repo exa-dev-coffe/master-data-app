@@ -17,7 +17,7 @@ type UpdateMenuRequest struct {
 	Price       float64 `db:"price" json:"price" validate:"required,gt=0"`
 	CategoryID  *int64  `db:"category_id" json:"category_id"`
 	Photo       string  `db:"photo" json:"photo" validate:"required,url"`
-	IsAvailable bool    `db:"is_available" json:"isAvailable" validate:"required"`
+	IsAvailable *bool   `db:"is_available" json:"isAvailable" validate:"required"`
 	UpdatedBy   int64   `db:"updated_by" json:"updatedBy"`
 }
 
