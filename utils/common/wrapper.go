@@ -14,20 +14,9 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-func BuildFilterQuery(baseQuery string, params ParamsListRequest, mappingField *map[string]string, mappingFieldType *map[string]string) (string, map[string]interface{}) {
+func BuildFilterQuery(baseQuery string, params ParamsListRequest, mappingFieldType *map[string]string) (string, map[string]interface{}) {
 	// Implementation here
 	args := map[string]interface{}{}
-	if mappingField != nil {
-		for i, field := range params.Search.Field {
-			if mapped, ok := (*mappingField)[field]; ok {
-				params.Search.Field[i] = mapped
-			} else {
-				log.Warn("Field", params.Search.Field, "not found in mappingField")
-				params.Search.Field[i] = ""
-			}
-		}
-	}
-
 	filteredField := []string{}
 	for _, field := range params.Search.Field {
 		if field != "" {
@@ -92,19 +81,9 @@ func BuildFilterQuery(baseQuery string, params ParamsListRequest, mappingField *
 	return baseQuery, args
 }
 
-func BuildCountQuery(baseQuery string, params ParamsListRequest, mappingField *map[string]string, mappingFieldType *map[string]string) (string, map[string]interface{}) {
+func BuildCountQuery(baseQuery string, params ParamsListRequest, mappingFieldType *map[string]string) (string, map[string]interface{}) {
 	// Implementation here
 	args := map[string]interface{}{}
-	if mappingField != nil {
-		for i, field := range params.Search.Field {
-			if mapped, ok := (*mappingField)[field]; ok {
-				params.Search.Field[i] = mapped
-			} else {
-				log.Warn("Field", params.Search.Field, "not found in mappingField")
-				params.Search.Field[i] = ""
-			}
-		}
-	}
 	filteredField := []string{}
 	for _, field := range params.Search.Field {
 		if field != "" {
@@ -158,6 +137,17 @@ func BuildCountQuery(baseQuery string, params ParamsListRequest, mappingField *m
 		}
 	}
 	return baseQuery, args
+}
+
+func BuildMappingField(params ParamsListRequest, mappingField *map[string]string) {
+	for i, field := range params.Search.Field {
+		if mapped, ok := (*mappingField)[field]; ok {
+			params.Search.Field[i] = mapped
+		} else {
+			log.Warn("Field ", field, " not found in mappingField")
+			params.Search.Field[i] = ""
+		}
+	}
 }
 
 func ParseQueryParams(queryParams map[string]string, params *ParamsListRequest) error {
