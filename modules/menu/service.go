@@ -1,6 +1,7 @@
 package menu
 
 import (
+	"eka-dev.com/master-data/modules/upload"
 	"eka-dev.com/master-data/utils/common"
 	"eka-dev.com/master-data/utils/response"
 	"github.com/jmoiron/sqlx"
@@ -23,10 +24,11 @@ type Service interface {
 type menuService struct {
 	repo Repository
 	db   *sqlx.DB
+	us   upload.Service
 }
 
-func NewMenuService(repo Repository, db *sqlx.DB) Service {
-	return &menuService{repo: repo, db: db}
+func NewMenuService(repo Repository, db *sqlx.DB, us upload.Service) Service {
+	return &menuService{repo: repo, db: db, us: us}
 }
 
 func (s *menuService) GetListMenusPagination(request common.ParamsListRequest) (*response.Pagination, error) {
@@ -46,7 +48,17 @@ func (s *menuService) UpdateMenu(tx *sqlx.Tx, menu UpdateMenuRequest) error {
 }
 
 func (s *menuService) DeleteMenu(tx *sqlx.Tx, request *common.OneRequest) error {
-	return s.repo.DeleteMenu(tx, request.Id)
+	photo, err := s.repo.DeleteMenu(tx, request.Id)
+	if err != nil {
+		return err
+	}
+	if photo != "" {
+		err = s.us.DeleteMenuFoto(photo)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (s *menuService) GetOneMenu(req *common.OneRequest) (*Menu, error) {

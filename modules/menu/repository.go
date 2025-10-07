@@ -16,7 +16,7 @@ type Repository interface {
 	GetListMenusNoPagination(params common.ParamsListRequest) (*[]Menu, error)
 	InsertMenu(tx *sqlx.Tx, model CreateMenuRequest) error
 	UpdateMenu(tx *sqlx.Tx, model UpdateMenuRequest) error
-	DeleteMenu(tx *sqlx.Tx, id int) error
+	DeleteMenu(tx *sqlx.Tx, id int) (string, error)
 	GetOneMenu(id int) (*Menu, error)
 	GetListMenusUncategorizedNoPagination(params common.ParamsListRequest) (*[]Menu, error)
 	GetListMenusUncategorizedPagination(params common.ParamsListRequest) (*response.Pagination, error)
@@ -156,19 +156,19 @@ func (r *menuRepository) UpdateMenu(tx *sqlx.Tx, model UpdateMenuRequest) error 
 	return nil
 }
 
-func (r *menuRepository) DeleteMenu(tx *sqlx.Tx, id int) error {
+func (r *menuRepository) DeleteMenu(tx *sqlx.Tx, id int) (string, error) {
 	// Implementation
-	query := `DELETE FROM tm_menus WHERE id = $1`
-	info, err := tx.Exec(query, id)
+	query := `DELETE FROM tm_menus WHERE id = $1 RETURNING photo`
+	var photo sql.NullString
+	err := tx.QueryRow(query, id).Scan(&photo)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return "", response.NotFound("Menu not found", nil)
+		}
 		log.Error("Failed to delete menu:", err)
-		return response.InternalServerError("Failed to delete menu", nil)
+		return "", response.InternalServerError("Failed to delete menu", nil)
 	}
-	err = validateAffectedRows(info)
-	if err != nil {
-		return err
-	}
-	return nil
+	return photo.String, nil
 }
 
 func (r *menuRepository) GetOneMenu(id int) (*Menu, error) {

@@ -3,6 +3,7 @@ package menu
 import (
 	"eka-dev.com/master-data/lib"
 	"eka-dev.com/master-data/middleware"
+	"eka-dev.com/master-data/modules/upload"
 	"eka-dev.com/master-data/utils/common"
 	"eka-dev.com/master-data/utils/response"
 	"github.com/gofiber/fiber/v2"
@@ -29,7 +30,8 @@ type handler struct {
 
 func NewHandler(app *fiber.App, db *sqlx.DB) Handler {
 	repo := NewMenuRepository(db)
-	service := NewMenuService(repo, db)
+	uploadService := upload.NewUploadService()
+	service := NewMenuService(repo, db, uploadService)
 	handler := &handler{service: service, db: db}
 
 	// mapping routes
