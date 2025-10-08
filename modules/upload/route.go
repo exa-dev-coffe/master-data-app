@@ -26,7 +26,7 @@ func NewHandler(app *fiber.App) Handler {
 	// mapping routes
 	routes := app.Group("/api/1.0/upload")
 	routes.Post("/upload-menu", middleware.RequireRole("admin"), handler.UploadMenuFoto)
-	routes.Delete("/delete", middleware.RequireRole("admin"), handler.DeleteMenuFoto)
+	routes.Delete("/delete-menu", middleware.RequireRole("admin"), handler.DeleteMenuFoto)
 
 	return handler
 }
