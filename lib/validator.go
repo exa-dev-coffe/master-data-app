@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"mime/multipart"
 
-	"eka-dev.com/master-data/utils/response"
+	"eka-dev.cloud/master-data/utils/response"
 	"github.com/go-playground/validator/v10"
 )
 

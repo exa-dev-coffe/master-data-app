@@ -1,9 +1,9 @@
 package menu
 
 import (
-	"eka-dev.com/master-data/modules/upload"
-	"eka-dev.com/master-data/utils/common"
-	"eka-dev.com/master-data/utils/response"
+	"eka-dev.cloud/master-data/modules/upload"
+	"eka-dev.cloud/master-data/utils/common"
+	"eka-dev.cloud/master-data/utils/response"
 	"github.com/jmoiron/sqlx"
 )
 

@@ -6,9 +6,9 @@ import (
 	"strconv"
 	"strings"
 
-	"eka-dev.com/master-data/lib"
-	"eka-dev.com/master-data/middleware"
-	"eka-dev.com/master-data/utils/response"
+	"eka-dev.cloud/master-data/lib"
+	"eka-dev.cloud/master-data/middleware"
+	"eka-dev.cloud/master-data/utils/response"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/log"
 	"github.com/jmoiron/sqlx"

@@ -1,8 +1,8 @@
 package category
 
 import (
-	"eka-dev.com/master-data/utils/common"
-	"eka-dev.com/master-data/utils/response"
+	"eka-dev.cloud/master-data/utils/common"
+	"eka-dev.cloud/master-data/utils/response"
 	"github.com/jmoiron/sqlx"
 )
 

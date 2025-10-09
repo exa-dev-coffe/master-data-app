@@ -1,4 +1,4 @@
-module eka-dev.com/master-data
+module eka-dev.cloud/master-data
 
 go 1.24.5
 

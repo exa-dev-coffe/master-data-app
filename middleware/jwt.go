@@ -4,8 +4,8 @@ import (
 	"errors"
 	"strings"
 
-	"eka-dev.com/master-data/config"
-	"eka-dev.com/master-data/utils/response"
+	"eka-dev.cloud/master-data/config"
+	"eka-dev.cloud/master-data/utils/response"
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v5"
 )

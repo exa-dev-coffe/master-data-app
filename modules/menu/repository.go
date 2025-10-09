@@ -4,8 +4,8 @@ import (
 	"database/sql"
 	"errors"
 
-	"eka-dev.com/master-data/utils/common"
-	"eka-dev.com/master-data/utils/response"
+	"eka-dev.cloud/master-data/utils/common"
+	"eka-dev.cloud/master-data/utils/response"
 	"github.com/gofiber/fiber/v2/log"
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
@@ -147,7 +147,7 @@ func (r *menuRepository) InsertMenu(tx *sqlx.Tx, model CreateMenuRequest) error 
 
 func (r *menuRepository) UpdateMenu(tx *sqlx.Tx, model UpdateMenuRequest) error {
 	// Implementation
-	query := `UPDATE tm_menus SET name=$1, description=$2, price=$3, category_id=$4, photo=$5, is_available=$6, updated_by=$7 WHERE id=$8`
+	query := `UPDATE tm_menus SET name=$1, description=$2, price=$3, category_id=$4, photo=$5, is_available=$6, updated_by=$7, updated_at=NOW() WHERE id=$8`
 	info, err := tx.Exec(query, model.Name, model.Description, model.Price, model.CategoryID, model.Photo, model.IsAvailable, model.UpdatedBy, model.Id)
 	if err != nil {
 		log.Error("Failed to update menu:", err)
@@ -292,7 +292,7 @@ func (r *menuRepository) GetListMenusUncategorizedPagination(params common.Param
 
 func (r *menuRepository) SetMenuCategory(tx *sqlx.Tx, model SetMenuCategory) error {
 	// Implementation
-	query := `UPDATE tm_menus SET category_id=$1, updated_by=$2 WHERE id=$3`
+	query := `UPDATE tm_menus SET category_id=$1, updated_by=$2, updated_at=NOW() WHERE id=$3`
 	info, err := tx.Exec(query, model.CategoryId, model.UpdatedBy, model.Id)
 	if err != nil {
 		log.Error("Failed to set menu category:", err)
@@ -318,7 +318,7 @@ func (r *menuRepository) GetMenusByCategoryID(categoryID int) (*[]Menu, error) {
 }
 
 func (r *menuRepository) UpdateMenuAvailability(tx *sqlx.Tx, id int, isAvailable bool, updatedBy int64) error {
-	query := `UPDATE tm_menus SET is_available=$1, updated_by=$2 WHERE id=$3`
+	query := `UPDATE tm_menus SET is_available=$1, updated_by=$2, updated_at=NOW() WHERE id=$3`
 	info, err := tx.Exec(query, isAvailable, updatedBy, id)
 	if err != nil {
 		log.Error("Failed to update menu availability:", err)

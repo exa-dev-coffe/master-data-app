@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"eka-dev.com/master-data/lib"
-	"eka-dev.com/master-data/utils/response"
+	"eka-dev.cloud/master-data/lib"
+	"eka-dev.cloud/master-data/utils/response"
 	"github.com/gofiber/fiber/v2/log"
 	"github.com/google/uuid"
 )

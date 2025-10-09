@@ -3,8 +3,8 @@ package db
 import (
 	"log"
 
-	"eka-dev.com/master-data/config"
-	"eka-dev.com/master-data/utils/constant"
+	"eka-dev.cloud/master-data/config"
+	"eka-dev.cloud/master-data/utils/constant"
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
