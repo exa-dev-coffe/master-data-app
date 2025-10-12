@@ -39,3 +39,8 @@ type Claims struct {
 	Role     string `json:"Role"`
 	jwt.RegisteredClaims
 }
+
+type InternalResponse struct {
+	Message string `json:"message"`
+	Success bool   `json:"success"`
+}
