@@ -23,6 +23,7 @@ type Repository interface {
 	SetMenuCategory(tx *sqlx.Tx, model SetMenuCategory) error
 	GetMenusByCategoryID(categoryID int) (*[]Menu, error)
 	UpdateMenuAvailability(tx *sqlx.Tx, id int, isAvailable bool, updatedBy int64) error
+	GetListMenusByIds(ids []int) ([]InternalMenuResponse, error)
 }
 
 type menuRepository struct {
@@ -329,6 +330,40 @@ func (r *menuRepository) UpdateMenuAvailability(tx *sqlx.Tx, id int, isAvailable
 		return err
 	}
 	return nil
+}
+
+func (r *menuRepository) GetListMenusByIds(ids []int) ([]InternalMenuResponse, error) {
+	if len(ids) == 0 {
+		return nil, response.BadRequest("No IDs provided", nil)
+	}
+
+	query, args, err := sqlx.In(`
+		SELECT id, price 
+		FROM tm_menus 
+		WHERE id IN (?) AND is_available = TRUE
+	`, ids)
+	if err != nil {
+		log.Error("Failed to build query with sqlx.In:", err)
+		return nil, response.InternalServerError("Failed to build query", nil)
+	}
+
+	query = r.db.Rebind(query)
+
+	var menus []InternalMenuResponse
+	if err := r.db.Select(&menus, query, args...); err != nil {
+		log.Error("Failed to get menus by IDs:", err)
+		return nil, response.InternalServerError("Failed to get menus by IDs", nil)
+	}
+
+	if len(menus) == 0 {
+		return nil, response.BadRequest("No menus found for the given IDs", nil)
+	}
+
+	if len(menus) != len(ids) {
+		return nil, response.BadRequest("Some menus are not available", nil)
+	}
+
+	return menus, nil
 }
 
 func validateAffectedRows(info sql.Result) error {

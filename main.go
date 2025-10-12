@@ -9,6 +9,7 @@ import (
 	_ "eka-dev.cloud/master-data/lib"
 	"eka-dev.cloud/master-data/middleware"
 	"eka-dev.cloud/master-data/modules/category"
+	"eka-dev.cloud/master-data/modules/internalModule"
 	"eka-dev.cloud/master-data/modules/menu"
 	"eka-dev.cloud/master-data/modules/table"
 	"eka-dev.cloud/master-data/modules/upload"
@@ -39,7 +40,7 @@ func initiator() {
 	})
 
 	fiberApp.Use(logger.New(logger.Config{
-		Format:     "[${time}] ${ip} ${method} ${path} - ${status}\n",
+		Format:     "[${time}] ${ip} ${method} ${path} - ${status} (${latency})\n",
 		TimeFormat: "2006-01-02 15:04:05",
 		TimeZone:   "Asia/Jakarta",
 	}))
@@ -49,8 +50,8 @@ func initiator() {
 	})
 
 	fiberApp.Use(cors.New(cors.Config{
-		AllowOrigins: "*",
-		AllowHeaders: "Origin, Content-Type, Accept, Authorization",
+		AllowOrigins: config.Config.AllowedOrigins,
+		AllowHeaders: "Origin, Content-Type, Accept, Authorization, X-Timestamp, X-Signature",
 		AllowMethods: "GET, POST, PUT, DELETE, OPTIONS",
 	}))
 
@@ -63,6 +64,8 @@ func initiator() {
 	upload.NewHandler(fiberApp)
 	// Tables
 	table.NewHandler(fiberApp, db.DB)
+	// Internal
+	internalModule.NewHandler(fiberApp, db.DB)
 
 	fiberApp.All("*", func(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusNotFound).JSON(response.NotFound("Route not found", nil))

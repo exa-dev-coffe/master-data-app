@@ -23,6 +23,8 @@ type appConfig struct {
 	MinioUseSSL       bool
 	MinioBucketName   string
 	MinioBaseURL      string
+	Secret            string
+	AllowedOrigins    string
 }
 
 var Config appConfig
@@ -53,5 +55,7 @@ func init() {
 		MinioUseSSL:       viper.GetBool("MINIO_USE_SSL"),
 		MinioBucketName:   viper.GetString("MINIO_BUCKET_NAME"),
 		MinioBaseURL:      viper.GetString("MINIO_BASE_URL"),
+		Secret:            viper.GetString("APP_SECRET"),
+		AllowedOrigins:    viper.GetString("APP_ALLOWED_ORIGINS"),
 	}
 }

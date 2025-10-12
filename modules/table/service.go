@@ -12,6 +12,7 @@ type Service interface {
 	InsertTable(tx *sqlx.Tx, table CreateTableRequest) error
 	UpdateTable(tx *sqlx.Tx, table UpdateTableRequest) error
 	DeleteTable(tx *sqlx.Tx, id int) error
+	ValidateTable(tableId int64) error
 }
 
 type tableService struct {
@@ -41,4 +42,8 @@ func (s *tableService) UpdateTable(tx *sqlx.Tx, table UpdateTableRequest) error 
 
 func (s *tableService) DeleteTable(tx *sqlx.Tx, id int) error {
 	return s.repo.DeleteTable(tx, id)
+}
+
+func (s *tableService) ValidateTable(tableId int64) error {
+	return s.repo.ValidateTable(tableId)
 }

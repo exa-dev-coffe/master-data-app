@@ -19,6 +19,7 @@ type Service interface {
 	SetMenuCategory(tx *sqlx.Tx, model SetMenuCategory) error
 	GetMenusByCategoryID(categoryID int) (*[]Menu, error)
 	UpdateMenuAvailability(tx *sqlx.Tx, model UpdateMenuAvailabilityRequest) error
+	GetListMenusByIDs(ids []int) ([]InternalMenuResponse, error)
 }
 
 type menuService struct {
@@ -83,4 +84,8 @@ func (s *menuService) GetMenusByCategoryID(categoryID int) (*[]Menu, error) {
 
 func (s *menuService) UpdateMenuAvailability(tx *sqlx.Tx, model UpdateMenuAvailabilityRequest) error {
 	return s.repo.UpdateMenuAvailability(tx, model.Id, model.IsAvailable, model.UpdatedBy)
+}
+
+func (s *menuService) GetListMenusByIDs(ids []int) ([]InternalMenuResponse, error) {
+	return s.repo.GetListMenusByIds(ids)
 }

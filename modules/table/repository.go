@@ -2,6 +2,7 @@ package table
 
 import (
 	"database/sql"
+	"errors"
 
 	"eka-dev.cloud/master-data/utils/common"
 	"eka-dev.cloud/master-data/utils/response"
@@ -15,6 +16,7 @@ type Repository interface {
 	InsertTable(tx *sqlx.Tx, model CreateTableRequest) error
 	UpdateTable(tx *sqlx.Tx, model UpdateTableRequest) error
 	DeleteTable(tx *sqlx.Tx, id int) error
+	ValidateTable(tableId int64) error
 }
 
 type tableRepository struct {
@@ -144,6 +146,21 @@ func (r *tableRepository) DeleteTable(tx *sqlx.Tx, id int) error {
 	err = validateAffectedRows(result)
 	if err != nil {
 		return err
+	}
+	return nil
+}
+
+func (r *tableRepository) ValidateTable(tableId int64) error {
+	var table int
+	query := `SELECT id FROM tm_tables WHERE id = $1`
+
+	err := r.db.Get(&table, query, tableId)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return response.BadRequest("Table not found", nil)
+		}
+		log.Error("Failed to validate table:", err)
+		return response.InternalServerError("Failed to validate table", nil)
 	}
 	return nil
 }
