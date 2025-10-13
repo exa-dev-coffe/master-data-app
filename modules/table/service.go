@@ -7,12 +7,13 @@ import (
 )
 
 type Service interface {
-	GetListTablesPagination(request common.ParamsListRequest) (*response.Pagination, error)
-	GetListTablesNoPagination(request common.ParamsListRequest) (*[]Table, error)
+	GetListTablesPagination(request common.ParamsListRequest) (*response.Pagination[[]Table], error)
+	GetListTablesNoPagination(request common.ParamsListRequest) ([]Table, error)
 	InsertTable(tx *sqlx.Tx, table CreateTableRequest) error
 	UpdateTable(tx *sqlx.Tx, table UpdateTableRequest) error
 	DeleteTable(tx *sqlx.Tx, id int) error
 	ValidateTable(tableId int64) error
+	GetTablesByIds(tableIds []int) ([]InternalTableResponse, error)
 }
 
 type tableService struct {
@@ -24,11 +25,11 @@ func NewTableService(repo Repository, db *sqlx.DB) Service {
 	return &tableService{repo: repo, db: db}
 }
 
-func (s *tableService) GetListTablesPagination(request common.ParamsListRequest) (*response.Pagination, error) {
+func (s *tableService) GetListTablesPagination(request common.ParamsListRequest) (*response.Pagination[[]Table], error) {
 	return s.repo.GetListTablesPagination(request)
 }
 
-func (s *tableService) GetListTablesNoPagination(request common.ParamsListRequest) (*[]Table, error) {
+func (s *tableService) GetListTablesNoPagination(request common.ParamsListRequest) ([]Table, error) {
 	return s.repo.getListTablesNoPagination(request)
 }
 
@@ -46,4 +47,8 @@ func (s *tableService) DeleteTable(tx *sqlx.Tx, id int) error {
 
 func (s *tableService) ValidateTable(tableId int64) error {
 	return s.repo.ValidateTable(tableId)
+}
+
+func (s *tableService) GetTablesByIds(tableIds []int) ([]InternalTableResponse, error) {
+	return s.repo.GetTablesByIds(tableIds)
 }

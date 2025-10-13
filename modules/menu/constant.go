@@ -7,11 +7,11 @@ const baseQueryUncategorized = `SELECT m.id, m.name, m.description, m.price, m.p
 	LEFT JOIN tm_categories c ON m.category_id = c.id WHERE m.category_id IS NULL`
 
 var mappingFieds = map[string]string{
-	"id":            "m.id",
-	"name":          "m.name",
-	"price":         "m.price",
-	"category_name": "c.name",
-	"category_id":   "c.id",
+	"id":           "m.id",
+	"name":         "m.name",
+	"price":        "m.price",
+	"categoryName": "c.name",
+	"categoryId":   "c.id",
 }
 
 var errorConstraint = map[string]string{

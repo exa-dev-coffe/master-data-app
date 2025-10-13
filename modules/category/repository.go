@@ -8,8 +8,8 @@ import (
 )
 
 type Repository interface {
-	GetListCategoriesPagination(params common.ParamsListRequest) (*response.Pagination, error)
-	GetListCategoriesNoPagination(params common.ParamsListRequest) (*[]Category, error)
+	GetListCategoriesPagination(params common.ParamsListRequest) (*response.Pagination[[]Category], error)
+	GetListCategoriesNoPagination(params common.ParamsListRequest) ([]Category, error)
 	InsertCategory(tx *sqlx.Tx, model CreateCategoryRequest) error
 	DeleteCategory(tx *sqlx.Tx, id int) error
 }
@@ -22,12 +22,12 @@ func NewCategoryRepository(db *sqlx.DB) Repository {
 	return &categoryRepository{db: db}
 }
 
-func (r *categoryRepository) GetListCategoriesPagination(params common.ParamsListRequest) (*response.Pagination, error) {
+func (r *categoryRepository) GetListCategoriesPagination(params common.ParamsListRequest) (*response.Pagination[[]Category], error) {
 	// Implementation
 	var record = make([]Category, 0)
 
 	// here
-	finalQuery, args := common.BuildFilterQuery(baseQuery, params, &mappingFieldType)
+	finalQuery, args := common.BuildFilterQuery(baseQuery, params, &mappingFieldType, "")
 
 	rows, err := r.db.NamedQuery(finalQuery, args)
 	if err != nil {
@@ -74,7 +74,7 @@ func (r *categoryRepository) GetListCategoriesPagination(params common.ParamsLis
 		return nil, response.InternalServerError("Failed to get total data", nil)
 	}
 
-	pagination := response.Pagination{
+	pagination := response.Pagination[[]Category]{
 		Data:        record,
 		TotalData:   totalData,
 		CurrentPage: params.Page,
@@ -87,13 +87,13 @@ func (r *categoryRepository) GetListCategoriesPagination(params common.ParamsLis
 
 }
 
-func (r *categoryRepository) GetListCategoriesNoPagination(params common.ParamsListRequest) (*[]Category, error) {
+func (r *categoryRepository) GetListCategoriesNoPagination(params common.ParamsListRequest) ([]Category, error) {
 	var record = make([]Category, 0)
 
 	// here
 	baseQuery := `SELECT id, name FROM tm_categories`
 
-	finalQuery, args := common.BuildFilterQuery(baseQuery, params, &mappingFieldType)
+	finalQuery, args := common.BuildFilterQuery(baseQuery, params, &mappingFieldType, "")
 
 	rows, err := r.db.NamedQuery(finalQuery, args)
 	if err != nil {
@@ -117,7 +117,7 @@ func (r *categoryRepository) GetListCategoriesNoPagination(params common.ParamsL
 		record = append(record, category)
 	}
 
-	return &record, nil
+	return record, nil
 }
 
 func (r *categoryRepository) InsertCategory(tx *sqlx.Tx, model CreateCategoryRequest) error {
