@@ -12,16 +12,16 @@ import (
 )
 
 type Repository interface {
-	GetListMenusPagination(params common.ParamsListRequest) (*response.Pagination, error)
-	GetListMenusNoPagination(params common.ParamsListRequest) (*[]Menu, error)
+	GetListMenusPagination(params common.ParamsListRequest) (*response.Pagination[[]Menu], error)
+	GetListMenusNoPagination(params common.ParamsListRequest) ([]Menu, error)
 	InsertMenu(tx *sqlx.Tx, model CreateMenuRequest) error
 	UpdateMenu(tx *sqlx.Tx, model UpdateMenuRequest) error
 	DeleteMenu(tx *sqlx.Tx, id int) (string, error)
 	GetOneMenu(id int) (*Menu, error)
-	GetListMenusUncategorizedNoPagination(params common.ParamsListRequest) (*[]Menu, error)
-	GetListMenusUncategorizedPagination(params common.ParamsListRequest) (*response.Pagination, error)
+	GetListMenusUncategorizedNoPagination(params common.ParamsListRequest) ([]Menu, error)
+	GetListMenusUncategorizedPagination(params common.ParamsListRequest) (*response.Pagination[[]Menu], error)
 	SetMenuCategory(tx *sqlx.Tx, model SetMenuCategoryRequest) error
-	GetMenusByCategoryID(categoryID int) (*[]Menu, error)
+	GetMenusByCategoryID(categoryID int) ([]Menu, error)
 	UpdateMenuAvailability(tx *sqlx.Tx, id int, isAvailable bool, updatedBy int64) error
 	GetListMenusByIds(ids []int) ([]InternalMenuResponse, error)
 	GetAvailableMenusByIds(ids []int) ([]InternalAvailableMenuResponse, error)
@@ -35,14 +35,14 @@ func NewMenuRepository(db *sqlx.DB) Repository {
 	return &menuRepository{db: db}
 }
 
-func (r *menuRepository) GetListMenusPagination(params common.ParamsListRequest) (*response.Pagination, error) {
+func (r *menuRepository) GetListMenusPagination(params common.ParamsListRequest) (*response.Pagination[[]Menu], error) {
 	// Implementation
 	var record = make([]Menu, 0)
 
 	// here
 	common.BuildMappingField(params, &mappingFieds)
 
-	finalQuery, args := common.BuildFilterQuery(baseQuery, params, &mappingFieldType)
+	finalQuery, args := common.BuildFilterQuery(baseQuery, params, &mappingFieldType, "")
 
 	rows, err := r.db.NamedQuery(finalQuery, args)
 	if err != nil {
@@ -89,7 +89,7 @@ func (r *menuRepository) GetListMenusPagination(params common.ParamsListRequest)
 		return nil, response.InternalServerError("Failed to execute count query", nil)
 	}
 
-	pagination := response.Pagination{
+	pagination := response.Pagination[[]Menu]{
 		Data:        record,
 		TotalData:   totalData,
 		CurrentPage: params.Page,
@@ -102,13 +102,13 @@ func (r *menuRepository) GetListMenusPagination(params common.ParamsListRequest)
 
 }
 
-func (r *menuRepository) GetListMenusNoPagination(params common.ParamsListRequest) (*[]Menu, error) {
+func (r *menuRepository) GetListMenusNoPagination(params common.ParamsListRequest) ([]Menu, error) {
 	// Implementation
 	var record = make([]Menu, 0)
 
 	common.BuildMappingField(params, &mappingFieds)
 
-	finalQuery, args := common.BuildFilterQuery(baseQuery, params, &mappingFieldType)
+	finalQuery, args := common.BuildFilterQuery(baseQuery, params, &mappingFieldType, "")
 
 	rows, err := r.db.NamedQuery(finalQuery, args)
 	if err != nil {
@@ -133,7 +133,7 @@ func (r *menuRepository) GetListMenusNoPagination(params common.ParamsListReques
 		record = append(record, menu)
 	}
 
-	return &record, nil
+	return record, nil
 }
 
 func (r *menuRepository) InsertMenu(tx *sqlx.Tx, model CreateMenuRequest) error {
@@ -192,13 +192,13 @@ func (r *menuRepository) GetOneMenu(id int) (*Menu, error) {
 	return &menu, nil
 }
 
-func (r *menuRepository) GetListMenusUncategorizedNoPagination(params common.ParamsListRequest) (*[]Menu, error) {
+func (r *menuRepository) GetListMenusUncategorizedNoPagination(params common.ParamsListRequest) ([]Menu, error) {
 	// Implementation
 	var record = make([]Menu, 0)
 
 	common.BuildMappingField(params, &mappingFieds)
 
-	finalQuery, args := common.BuildFilterQuery(baseQueryUncategorized, params, &mappingFieldType)
+	finalQuery, args := common.BuildFilterQuery(baseQueryUncategorized, params, &mappingFieldType, "")
 
 	rows, err := r.db.NamedQuery(finalQuery, args)
 
@@ -224,16 +224,16 @@ func (r *menuRepository) GetListMenusUncategorizedNoPagination(params common.Par
 		record = append(record, menu)
 	}
 
-	return &record, nil
+	return record, nil
 }
 
-func (r *menuRepository) GetListMenusUncategorizedPagination(params common.ParamsListRequest) (*response.Pagination, error) {
+func (r *menuRepository) GetListMenusUncategorizedPagination(params common.ParamsListRequest) (*response.Pagination[[]Menu], error) {
 	// Implementation
 	var record = make([]Menu, 0)
 
 	common.BuildMappingField(params, &mappingFieds)
 
-	finalQuery, args := common.BuildFilterQuery(baseQueryUncategorized, params, &mappingFieldType)
+	finalQuery, args := common.BuildFilterQuery(baseQueryUncategorized, params, &mappingFieldType, "")
 
 	rows, err := r.db.NamedQuery(finalQuery, args)
 	if err != nil {
@@ -280,7 +280,7 @@ func (r *menuRepository) GetListMenusUncategorizedPagination(params common.Param
 		return nil, response.InternalServerError("Failed to execute count query", nil)
 	}
 
-	pagination := response.Pagination{
+	pagination := response.Pagination[[]Menu]{
 		Data:        record,
 		TotalData:   totalData,
 		CurrentPage: params.Page,
@@ -307,7 +307,7 @@ func (r *menuRepository) SetMenuCategory(tx *sqlx.Tx, model SetMenuCategoryReque
 	return nil
 }
 
-func (r *menuRepository) GetMenusByCategoryID(categoryID int) (*[]Menu, error) {
+func (r *menuRepository) GetMenusByCategoryID(categoryID int) ([]Menu, error) {
 	var menus = make([]Menu, 0)
 	query := `SELECT m.id, m.name, m.description, m.price, m.photo, m.is_available, COALESCE(c.id, 0) AS category_id, COALESCE(c.name, 'Uncategorized') AS category_name FROM tm_menus m
 	LEFT JOIN tm_categories c ON m.category_id = c.id WHERE c.id=$1`
@@ -316,7 +316,7 @@ func (r *menuRepository) GetMenusByCategoryID(categoryID int) (*[]Menu, error) {
 		log.Error("Failed to get menus by category ID:", err)
 		return nil, response.InternalServerError("Failed to get menus by category ID", nil)
 	}
-	return &menus, nil
+	return menus, nil
 }
 
 func (r *menuRepository) UpdateMenuAvailability(tx *sqlx.Tx, id int, isAvailable bool, updatedBy int64) error {

@@ -8,16 +8,16 @@ import (
 )
 
 type Service interface {
-	GetListMenusPagination(request common.ParamsListRequest) (*response.Pagination, error)
-	GetListMenusNoPagination(request common.ParamsListRequest) (*[]Menu, error)
+	GetListMenusPagination(request common.ParamsListRequest) (*response.Pagination[[]Menu], error)
+	GetListMenusNoPagination(request common.ParamsListRequest) ([]Menu, error)
 	InsertMenu(tx *sqlx.Tx, menu CreateMenuRequest) error
 	UpdateMenu(tx *sqlx.Tx, menu UpdateMenuRequest) error
 	DeleteMenu(tx *sqlx.Tx, request *common.OneRequest) error
 	GetOneMenu(id *common.OneRequest) (*Menu, error)
-	GetListMenusUncategorizedNoPagination(request common.ParamsListRequest) (*[]Menu, error)
-	GetListMenusUncategorizedPagination(request common.ParamsListRequest) (*response.Pagination, error)
+	GetListMenusUncategorizedNoPagination(request common.ParamsListRequest) ([]Menu, error)
+	GetListMenusUncategorizedPagination(request common.ParamsListRequest) (*response.Pagination[[]Menu], error)
 	SetMenuCategory(tx *sqlx.Tx, model SetMenuCategoryRequest) error
-	GetMenusByCategoryID(categoryID int) (*[]Menu, error)
+	GetMenusByCategoryID(categoryID int) ([]Menu, error)
 	UpdateMenuAvailability(tx *sqlx.Tx, model UpdateMenuAvailabilityRequest) error
 	GetListMenusByIDs(ids []int) ([]InternalMenuResponse, error)
 	GetAvailableMenusByIds(ids []int) ([]InternalAvailableMenuResponse, error)
@@ -33,11 +33,11 @@ func NewMenuService(repo Repository, db *sqlx.DB, us upload.Service) Service {
 	return &menuService{repo: repo, db: db, us: us}
 }
 
-func (s *menuService) GetListMenusPagination(request common.ParamsListRequest) (*response.Pagination, error) {
+func (s *menuService) GetListMenusPagination(request common.ParamsListRequest) (*response.Pagination[[]Menu], error) {
 	return s.repo.GetListMenusPagination(request)
 }
 
-func (s *menuService) GetListMenusNoPagination(request common.ParamsListRequest) (*[]Menu, error) {
+func (s *menuService) GetListMenusNoPagination(request common.ParamsListRequest) ([]Menu, error) {
 	return s.repo.GetListMenusNoPagination(request)
 }
 
@@ -67,11 +67,11 @@ func (s *menuService) GetOneMenu(req *common.OneRequest) (*Menu, error) {
 	return s.repo.GetOneMenu(req.Id)
 }
 
-func (s *menuService) GetListMenusUncategorizedNoPagination(request common.ParamsListRequest) (*[]Menu, error) {
+func (s *menuService) GetListMenusUncategorizedNoPagination(request common.ParamsListRequest) ([]Menu, error) {
 	return s.repo.GetListMenusUncategorizedNoPagination(request)
 }
 
-func (s *menuService) GetListMenusUncategorizedPagination(request common.ParamsListRequest) (*response.Pagination, error) {
+func (s *menuService) GetListMenusUncategorizedPagination(request common.ParamsListRequest) (*response.Pagination[[]Menu], error) {
 	return s.repo.GetListMenusUncategorizedPagination(request)
 }
 
@@ -79,7 +79,7 @@ func (s *menuService) SetMenuCategory(tx *sqlx.Tx, model SetMenuCategoryRequest)
 	return s.repo.SetMenuCategory(tx, model)
 }
 
-func (s *menuService) GetMenusByCategoryID(categoryID int) (*[]Menu, error) {
+func (s *menuService) GetMenusByCategoryID(categoryID int) ([]Menu, error) {
 	return s.repo.GetMenusByCategoryID(categoryID)
 }
 

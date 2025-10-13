@@ -11,8 +11,8 @@ import (
 )
 
 type Repository interface {
-	GetListTablesPagination(params common.ParamsListRequest) (*response.Pagination, error)
-	getListTablesNoPagination(params common.ParamsListRequest) (*[]Table, error)
+	GetListTablesPagination(params common.ParamsListRequest) (*response.Pagination[[]Table], error)
+	getListTablesNoPagination(params common.ParamsListRequest) ([]Table, error)
 	InsertTable(tx *sqlx.Tx, model CreateTableRequest) error
 	UpdateTable(tx *sqlx.Tx, model UpdateTableRequest) error
 	DeleteTable(tx *sqlx.Tx, id int) error
@@ -28,10 +28,10 @@ func NewTableRepository(db *sqlx.DB) Repository {
 	return &tableRepository{db: db}
 }
 
-func (r *tableRepository) GetListTablesPagination(params common.ParamsListRequest) (*response.Pagination, error) {
+func (r *tableRepository) GetListTablesPagination(params common.ParamsListRequest) (*response.Pagination[[]Table], error) {
 	// Implementation
 	var record = make([]Table, 0)
-	finalQuery, args := common.BuildFilterQuery(baseQuery, params, &mappingFieldType)
+	finalQuery, args := common.BuildFilterQuery(baseQuery, params, &mappingFieldType, "")
 	rows, err := r.db.NamedQuery(finalQuery, args)
 	if err != nil {
 		log.Error("Failed to execute query:", err)
@@ -74,7 +74,7 @@ func (r *tableRepository) GetListTablesPagination(params common.ParamsListReques
 		log.Error("Failed to get total data:", err)
 		return nil, response.InternalServerError("Failed to get total data", nil)
 	}
-	pagination := response.Pagination{
+	pagination := response.Pagination[[]Table]{
 		Data:        record,
 		TotalData:   totalData,
 		CurrentPage: params.Page,
@@ -85,11 +85,11 @@ func (r *tableRepository) GetListTablesPagination(params common.ParamsListReques
 	return &pagination, nil
 }
 
-func (r *tableRepository) getListTablesNoPagination(params common.ParamsListRequest) (*[]Table, error) {
+func (r *tableRepository) getListTablesNoPagination(params common.ParamsListRequest) ([]Table, error) {
 	// Implementation
 	var record = make([]Table, 0)
 
-	finalQuery, args := common.BuildFilterQuery(baseQuery, params, &mappingFieldType)
+	finalQuery, args := common.BuildFilterQuery(baseQuery, params, &mappingFieldType, "")
 	rows, err := r.db.NamedQuery(finalQuery, args)
 	if err != nil {
 		log.Error("Failed to execute query:", err)
@@ -110,7 +110,7 @@ func (r *tableRepository) getListTablesNoPagination(params common.ParamsListRequ
 		}
 		record = append(record, table)
 	}
-	return &record, nil
+	return record, nil
 }
 
 func (r *tableRepository) InsertTable(tx *sqlx.Tx, model CreateTableRequest) error {
