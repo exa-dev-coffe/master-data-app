@@ -14,3 +14,8 @@ type Table struct {
 	Name      string `db:"name" json:"name"`
 	UpdatedAt string `db:"updated_at" json:"updatedAt"`
 }
+
+type InternalTableResponse struct {
+	Id   int64  `json:"id" db:"id"`
+	Name string `json:"name" db:"name"`
+}

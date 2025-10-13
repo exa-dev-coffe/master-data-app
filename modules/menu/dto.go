@@ -21,7 +21,7 @@ type UpdateMenuRequest struct {
 	UpdatedBy   int64   `db:"updated_by" json:"updatedBy"`
 }
 
-type SetMenuCategory struct {
+type SetMenuCategoryRequest struct {
 	Id         int64 `db:"id" json:"id" validate:"required"`
 	CategoryId int64 `db:"category_id" json:"categoryId" validate:"required"`
 	UpdatedBy  int64 `db:"updated_by" json:"updatedBy"`
@@ -43,7 +43,15 @@ type Menu struct {
 	CategoryId   int64   `db:"category_id" json:"categoryId"`
 	CategoryName string  `db:"category_name" json:"categoryName"`
 }
-type InternalMenuResponse struct {
+type InternalAvailableMenuResponse struct {
 	Id    int64   `json:"id" db:"id"`
 	Price float64 `json:"price" db:"price"`
+}
+
+type InternalMenuResponse struct {
+	Id          int64   `json:"id" db:"id"`
+	Name        string  `json:"name" db:"name"`
+	Description string  `json:"description" db:"description"`
+	Photo       string  `json:"photo" db:"photo"`
+	Price       float64 `json:"price" db:"price"`
 }

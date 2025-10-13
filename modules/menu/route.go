@@ -191,7 +191,7 @@ func (h *handler) GetMenusUncategorized(c *fiber.Ctx) error {
 }
 
 func (h *handler) SetMenuCategory(c *fiber.Ctx) error {
-	var request SetMenuCategory
+	var request SetMenuCategoryRequest
 	err := c.BodyParser(&request)
 	if err != nil {
 		log.Error("Error parsing request body: ", err)
@@ -210,7 +210,7 @@ func (h *handler) SetMenuCategory(c *fiber.Ctx) error {
 
 	request.UpdatedBy = claims.UserId
 
-	err = common.WithTransaction[SetMenuCategory](h.db, h.service.SetMenuCategory, request)
+	err = common.WithTransaction[SetMenuCategoryRequest](h.db, h.service.SetMenuCategory, request)
 	if err != nil {
 		return err
 	}

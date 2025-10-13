@@ -17,6 +17,7 @@ type Repository interface {
 	UpdateTable(tx *sqlx.Tx, model UpdateTableRequest) error
 	DeleteTable(tx *sqlx.Tx, id int) error
 	ValidateTable(tableId int64) error
+	GetTablesByIds(tableIds []int) ([]InternalTableResponse, error)
 }
 
 type tableRepository struct {
@@ -163,6 +164,35 @@ func (r *tableRepository) ValidateTable(tableId int64) error {
 		return response.InternalServerError("Failed to validate table", nil)
 	}
 	return nil
+}
+
+func (r *tableRepository) GetTablesByIds(tableIds []int) ([]InternalTableResponse, error) {
+	var tables []InternalTableResponse
+
+	query, args, err := sqlx.In(`SELECT id, name FROM tm_tables WHERE id IN (?)`, tableIds)
+
+	if err != nil {
+		log.Error("Failed to build query:", err)
+		return nil, response.InternalServerError("Failed to build query", nil)
+	}
+
+	query = r.db.Rebind(query)
+
+	err = r.db.Select(&tables, query, args...)
+	if err != nil {
+		log.Error("Failed to get table by ids:", err)
+		return nil, response.InternalServerError("Failed to get table by ids", nil)
+	}
+
+	if len(tables) == 0 {
+		return nil, response.NotFound("Tables not found", nil)
+	}
+
+	if len(tables) != len(tableIds) {
+		return nil, response.BadRequest("Some tables not found", nil)
+	}
+
+	return tables, nil
 }
 
 func validateAffectedRows(info sql.Result) error {

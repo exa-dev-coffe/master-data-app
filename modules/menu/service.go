@@ -16,10 +16,11 @@ type Service interface {
 	GetOneMenu(id *common.OneRequest) (*Menu, error)
 	GetListMenusUncategorizedNoPagination(request common.ParamsListRequest) (*[]Menu, error)
 	GetListMenusUncategorizedPagination(request common.ParamsListRequest) (*response.Pagination, error)
-	SetMenuCategory(tx *sqlx.Tx, model SetMenuCategory) error
+	SetMenuCategory(tx *sqlx.Tx, model SetMenuCategoryRequest) error
 	GetMenusByCategoryID(categoryID int) (*[]Menu, error)
 	UpdateMenuAvailability(tx *sqlx.Tx, model UpdateMenuAvailabilityRequest) error
 	GetListMenusByIDs(ids []int) ([]InternalMenuResponse, error)
+	GetAvailableMenusByIds(ids []int) ([]InternalAvailableMenuResponse, error)
 }
 
 type menuService struct {
@@ -74,7 +75,7 @@ func (s *menuService) GetListMenusUncategorizedPagination(request common.ParamsL
 	return s.repo.GetListMenusUncategorizedPagination(request)
 }
 
-func (s *menuService) SetMenuCategory(tx *sqlx.Tx, model SetMenuCategory) error {
+func (s *menuService) SetMenuCategory(tx *sqlx.Tx, model SetMenuCategoryRequest) error {
 	return s.repo.SetMenuCategory(tx, model)
 }
 
@@ -88,4 +89,8 @@ func (s *menuService) UpdateMenuAvailability(tx *sqlx.Tx, model UpdateMenuAvaila
 
 func (s *menuService) GetListMenusByIDs(ids []int) ([]InternalMenuResponse, error) {
 	return s.repo.GetListMenusByIds(ids)
+}
+
+func (s *menuService) GetAvailableMenusByIds(ids []int) ([]InternalAvailableMenuResponse, error) {
+	return s.repo.GetAvailableMenusByIds(ids)
 }

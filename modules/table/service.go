@@ -13,6 +13,7 @@ type Service interface {
 	UpdateTable(tx *sqlx.Tx, table UpdateTableRequest) error
 	DeleteTable(tx *sqlx.Tx, id int) error
 	ValidateTable(tableId int64) error
+	GetTablesByIds(tableIds []int) ([]InternalTableResponse, error)
 }
 
 type tableService struct {
@@ -46,4 +47,8 @@ func (s *tableService) DeleteTable(tx *sqlx.Tx, id int) error {
 
 func (s *tableService) ValidateTable(tableId int64) error {
 	return s.repo.ValidateTable(tableId)
+}
+
+func (s *tableService) GetTablesByIds(tableIds []int) ([]InternalTableResponse, error) {
+	return s.repo.GetTablesByIds(tableIds)
 }
