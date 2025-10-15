@@ -69,7 +69,7 @@ func (r *menuRepository) GetListMenusPagination(params common.ParamsListRequest)
 
 	// get total data
 	var totalData int
-	countQuery := `SELECT COUNT(*) FROM tm_menus m`
+	countQuery := `SELECT COUNT(*) FROM tm_menus m LEFT JOIN tm_categories c ON m.category_id = c.id `
 	countFinalQuery, countArgs := common.BuildCountQuery(countQuery, params, &mappingFieldType)
 	countStmt, err := r.db.PrepareNamed(countFinalQuery)
 
