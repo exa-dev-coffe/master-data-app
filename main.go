@@ -6,6 +6,7 @@ import (
 	"eka-dev.cloud/master-data/config"
 	"eka-dev.cloud/master-data/db"
 	_ "eka-dev.cloud/master-data/db"
+	"eka-dev.cloud/master-data/lib"
 	_ "eka-dev.cloud/master-data/lib"
 	"eka-dev.cloud/master-data/middleware"
 	"eka-dev.cloud/master-data/modules/category"
@@ -18,6 +19,7 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/jmoiron/sqlx"
+	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 func main() {
@@ -55,6 +57,23 @@ func initiator() {
 		AllowMethods: "GET, POST, PUT, DELETE, OPTIONS",
 	}))
 
+	ch, err := lib.GetChannel()
+	if err != nil {
+		log.Fatalln("Failed to connect to RabbitMQ:", err)
+		return
+	}
+
+	defer func(ch *amqp.Channel) {
+		err := ch.Close()
+		if err != nil {
+			log.Println("Error closing RabbitMQ channel:", err)
+		}
+	}(ch)
+
+	// Initialize RabbitMQ consumers
+	// Menu
+	menu.NewListener(ch, db.DB)
+
 	// Initialize routes
 	// Categories
 	category.NewHandler(fiberApp, db.DB)
@@ -71,7 +90,8 @@ func initiator() {
 		return c.Status(fiber.StatusNotFound).JSON(response.NotFound("Route not found", nil))
 	})
 
-	err := fiberApp.Listen(config.Config.Port)
+	err = fiberApp.Listen(config.Config.Port)
+
 	if err != nil {
 		log.Fatalln("Failed to start server:", err)
 		return

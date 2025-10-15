@@ -25,6 +25,7 @@ type Repository interface {
 	UpdateMenuAvailability(tx *sqlx.Tx, id int, isAvailable bool, updatedBy int64) error
 	GetListMenusByIds(ids []int) ([]InternalMenuResponse, error)
 	GetAvailableMenusByIds(ids []int) ([]InternalAvailableMenuResponse, error)
+	UpdateRatingAndReviewCount(tx *sqlx.Tx, id int, rating float64, updatedBy int64) error
 }
 
 type menuRepository struct {
@@ -400,6 +401,26 @@ func (r *menuRepository) GetListMenusByIds(ids []int) ([]InternalMenuResponse, e
 	}
 
 	return menus, nil
+}
+
+func (r *menuRepository) UpdateRatingAndReviewCount(tx *sqlx.Tx, id int, rating float64, updatedBy int64) error {
+	query := `UPDATE tm_menus
+		SET 
+			rating = ((rating * review_count) + $1) / (review_count + 1),
+			review_count = review_count + 1,
+			updated_by = $2,
+			updated_at = NOW()
+		WHERE id = $3`
+	info, err := tx.Exec(query, rating, updatedBy, id)
+	if err != nil {
+		log.Error("Failed to update menu rating and review count:", err)
+		return response.InternalServerError("Failed to update menu rating and review count", nil)
+	}
+	err = validateAffectedRows(info)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func validateAffectedRows(info sql.Result) error {

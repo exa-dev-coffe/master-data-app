@@ -25,6 +25,7 @@ type appConfig struct {
 	MinioBaseURL      string
 	Secret            string
 	AllowedOrigins    string
+	RabbitmqUrl       string
 }
 
 var Config appConfig
@@ -57,5 +58,6 @@ func init() {
 		MinioBaseURL:      viper.GetString("MINIO_BASE_URL"),
 		Secret:            viper.GetString("APP_SECRET"),
 		AllowedOrigins:    viper.GetString("APP_ALLOWED_ORIGINS"),
+		RabbitmqUrl:       viper.GetString("RABBITMQ_URL"),
 	}
 }
