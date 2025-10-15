@@ -36,6 +36,7 @@ type UpdateMenuAvailabilityRequest struct {
 type Menu struct {
 	Id           int64   `db:"id" json:"id"`
 	Name         string  `db:"name" json:"name"`
+	Rating       float64 `db:"rating" json:"rating"`
 	Description  string  `db:"description" json:"description"`
 	Photo        string  `db:"photo" json:"photo"`
 	IsAvailable  bool    `db:"is_available" json:"isAvailable"`
