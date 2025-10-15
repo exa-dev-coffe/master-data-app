@@ -55,3 +55,9 @@ type InternalMenuResponse struct {
 	Photo       string  `json:"photo" db:"photo"`
 	Price       float64 `json:"price" db:"price"`
 }
+
+type UpdateRatingAndReviewCountRequest struct {
+	Id        int     ` json:"id" validate:"required"`
+	Rating    float64 ` json:"rating" validate:"required,gte=0,lte=5"`
+	UpdatedBy int64   ` json:"updatedBy"`
+}

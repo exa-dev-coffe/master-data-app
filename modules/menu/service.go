@@ -21,6 +21,7 @@ type Service interface {
 	UpdateMenuAvailability(tx *sqlx.Tx, model UpdateMenuAvailabilityRequest) error
 	GetListMenusByIDs(ids []int) ([]InternalMenuResponse, error)
 	GetAvailableMenusByIds(ids []int) ([]InternalAvailableMenuResponse, error)
+	UpdateRatingAndReviewCount(tx *sqlx.Tx, model UpdateRatingAndReviewCountRequest) error
 }
 
 type menuService struct {
@@ -93,4 +94,8 @@ func (s *menuService) GetListMenusByIDs(ids []int) ([]InternalMenuResponse, erro
 
 func (s *menuService) GetAvailableMenusByIds(ids []int) ([]InternalAvailableMenuResponse, error) {
 	return s.repo.GetAvailableMenusByIds(ids)
+}
+
+func (s *menuService) UpdateRatingAndReviewCount(tx *sqlx.Tx, model UpdateRatingAndReviewCountRequest) error {
+	return s.repo.UpdateRatingAndReviewCount(tx, model.Id, model.Rating, model.UpdatedBy)
 }

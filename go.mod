@@ -11,6 +11,7 @@ require (
 	github.com/jmoiron/sqlx v1.4.0
 	github.com/lib/pq v1.10.9
 	github.com/minio/minio-go/v7 v7.0.95
+	github.com/rabbitmq/amqp091-go v1.10.0
 	github.com/spf13/viper v1.21.0
 	golang.org/x/text v0.28.0
 )
