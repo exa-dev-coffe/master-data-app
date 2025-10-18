@@ -29,7 +29,7 @@ type SetMenuCategoryRequest struct {
 
 type UpdateMenuAvailabilityRequest struct {
 	Id          int   `json:"id" validate:"required"`
-	IsAvailable bool  `json:"isAvailable" validate:"required"`
+	IsAvailable *bool `json:"isAvailable" validate:"required"`
 	UpdatedBy   int64 `json:"updatedBy"`
 }
 
