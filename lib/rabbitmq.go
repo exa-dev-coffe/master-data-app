@@ -232,10 +232,16 @@ func ListenQueue(
 			if err := handler(msg); err != nil {
 				log.Errorf("[!] Handler error: %v", err)
 				if !autoAck {
-					_ = msg.Nack(false, true)
+					err = msg.Nack(false, true)
+					if err != nil {
+						log.Errorf("[!] Nack error: %v", err)
+					}
 				}
 			} else if !autoAck {
-				_ = msg.Ack(false)
+				err = msg.Ack(false)
+				if err != nil {
+					log.Errorf("[!] Ack error: %v", err)
+				}
 			}
 		}
 	}()

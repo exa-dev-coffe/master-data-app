@@ -340,9 +340,9 @@ func (r *menuRepository) GetAvailableMenusByIds(ids []int) ([]InternalAvailableM
 	}
 
 	query, args, err := sqlx.In(`
-		SELECT id, price
+		SELECT id, price, name, is_available
 		FROM tm_menus 
-		WHERE id IN (?) AND is_available = TRUE
+		WHERE id IN (?)
 	`, ids)
 	if err != nil {
 		log.Error("Failed to build query with sqlx.In:", err)
@@ -363,6 +363,19 @@ func (r *menuRepository) GetAvailableMenusByIds(ids []int) ([]InternalAvailableM
 
 	if len(menus) != len(ids) {
 		return nil, response.BadRequest("Some menus are not available", nil)
+	}
+
+	isHaveNotAvailable := false
+	errorFormatNotAvailable := "Menu "
+	for _, menu := range menus {
+		if menu.IsAvailable == false {
+			isHaveNotAvailable = true
+		}
+		errorFormatNotAvailable = errorFormatNotAvailable + ", " + menu.Name
+	}
+
+	if isHaveNotAvailable {
+		return nil, response.BadRequest(errorFormatNotAvailable+" is not available", nil)
 	}
 
 	return menus, nil
