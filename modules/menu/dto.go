@@ -45,8 +45,10 @@ type Menu struct {
 	CategoryName string  `db:"category_name" json:"categoryName"`
 }
 type InternalAvailableMenuResponse struct {
-	Id    int64   `json:"id" db:"id"`
-	Price float64 `json:"price" db:"price"`
+	Id          int64   `json:"id" db:"id"`
+	Price       float64 `json:"price" db:"price"`
+	IsAvailable bool    `json:"isAvailable" db:"is_available"`
+	Name        string  `json:"name" db:"name"`
 }
 
 type InternalMenuResponse struct {

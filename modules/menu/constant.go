@@ -1,9 +1,9 @@
 package menu
 
-const baseQuery = `SELECT m.id, m.name, m.description, m.price, m.photo, m.is_available, COALESCE(c.id, 0) AS category_id, COALESCE(c.name, 'Uncategorized') AS category_name FROM tm_menus m
+const baseQuery = `SELECT m.id, m.name, m.description, m.price, m.rating, m.photo, m.is_available, COALESCE(c.id, 0) AS category_id, COALESCE(c.name, 'Uncategorized') AS category_name FROM tm_menus m
 LEFT JOIN tm_categories c ON m.category_id = c.id`
 
-const baseQueryUncategorized = `SELECT m.id, m.name, m.description, m.price, m.photo, m.is_available, COALESCE(c.id, 0) AS category_id, COALESCE(c.name, 'Uncategorized') AS category_name FROM tm_menus m
+const baseQueryUncategorized = `SELECT m.id, m.name, m.description, m.price, m.rating, m.photo, m.is_available, COALESCE(c.id, 0) AS category_id, COALESCE(c.name, 'Uncategorized') AS category_name FROM tm_menus m
 	LEFT JOIN tm_categories c ON m.category_id = c.id WHERE m.category_id IS NULL`
 
 var mappingFieds = map[string]string{
