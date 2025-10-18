@@ -22,7 +22,7 @@ type Repository interface {
 	GetListMenusUncategorizedPagination(params common.ParamsListRequest) (*response.Pagination[[]Menu], error)
 	SetMenuCategory(tx *sqlx.Tx, model SetMenuCategoryRequest) error
 	GetMenusByCategoryID(categoryID int) ([]Menu, error)
-	UpdateMenuAvailability(tx *sqlx.Tx, id int, isAvailable bool, updatedBy int64) error
+	UpdateMenuAvailability(tx *sqlx.Tx, id int, isAvailable *bool, updatedBy int64) error
 	GetListMenusByIds(ids []int) ([]InternalMenuResponse, error)
 	GetAvailableMenusByIds(ids []int) ([]InternalAvailableMenuResponse, error)
 	UpdateRatingAndReviewCount(tx *sqlx.Tx, id int, rating float64, updatedBy int64) error
@@ -320,7 +320,7 @@ func (r *menuRepository) GetMenusByCategoryID(categoryID int) ([]Menu, error) {
 	return menus, nil
 }
 
-func (r *menuRepository) UpdateMenuAvailability(tx *sqlx.Tx, id int, isAvailable bool, updatedBy int64) error {
+func (r *menuRepository) UpdateMenuAvailability(tx *sqlx.Tx, id int, isAvailable *bool, updatedBy int64) error {
 	query := `UPDATE tm_menus SET is_available=$1, updated_by=$2, updated_at=NOW() WHERE id=$3`
 	info, err := tx.Exec(query, isAvailable, updatedBy, id)
 	if err != nil {
