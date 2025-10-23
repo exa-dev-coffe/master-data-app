@@ -16,7 +16,7 @@ type Repository interface {
 	GetListMenusNoPagination(params common.ParamsListRequest) ([]Menu, error)
 	InsertMenu(tx *sqlx.Tx, model CreateMenuRequest) error
 	UpdateMenu(tx *sqlx.Tx, model UpdateMenuRequest) error
-	DeleteMenu(tx *sqlx.Tx, id int, updatedBy int64) (string, error)
+	DeleteMenu(tx *sqlx.Tx, id int, updatedBy int64) error
 	GetOneMenu(id int) (*Menu, error)
 	GetListMenusUncategorizedNoPagination(params common.ParamsListRequest) ([]Menu, error)
 	GetListMenusUncategorizedPagination(params common.ParamsListRequest) (*response.Pagination[[]Menu], error)
@@ -163,19 +163,21 @@ func (r *menuRepository) UpdateMenu(tx *sqlx.Tx, model UpdateMenuRequest) error 
 	return nil
 }
 
-func (r *menuRepository) DeleteMenu(tx *sqlx.Tx, id int, updatedBy int64) (string, error) {
+func (r *menuRepository) DeleteMenu(tx *sqlx.Tx, id int, updatedBy int64) error {
 	// Implementation
-	query := `UPDATE tm_menus SET deleted_at = NOW(), deleted_by = $2, is_deleted = TRUE WHERE id = $1 RETURNING photo`
-	var photo sql.NullString
-	err := tx.QueryRow(query, id, updatedBy).Scan(&photo)
+	query := `UPDATE tm_menus SET deleted_at = NOW(), deleted_by = $2, is_deleted = TRUE WHERE id = $1`
+
+	info, err := tx.Exec(query, id, updatedBy)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return "", response.NotFound("Menu not found", nil)
-		}
 		log.Error("Failed to delete menu:", err)
-		return "", response.InternalServerError("Failed to delete menu", nil)
+		return response.InternalServerError("Failed to delete menu", nil)
 	}
-	return photo.String, nil
+	err = validateAffectedRows(info)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (r *menuRepository) GetOneMenu(id int) (*Menu, error) {
@@ -453,7 +455,7 @@ func checkErrorConstraint(err error, baseMessage string) error {
 		if msg, ok := errorConstraint[pqErr.Constraint]; ok {
 			return response.BadRequest(msg, nil)
 		}
-		// fallback if the constraint is not registered
+		// Return an internal server error if the constraint is not registered
 		return response.InternalServerError(baseMessage, nil)
 	} else {
 		return response.InternalServerError(baseMessage, nil)

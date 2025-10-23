@@ -51,15 +51,9 @@ func (s *menuService) UpdateMenu(tx *sqlx.Tx, menu UpdateMenuRequest) error {
 }
 
 func (s *menuService) DeleteMenu(tx *sqlx.Tx, request *common.OneRequest) error {
-	photo, err := s.repo.DeleteMenu(tx, request.Id, request.UpdatedBy)
+	err := s.repo.DeleteMenu(tx, request.Id, request.UpdatedBy)
 	if err != nil {
 		return err
-	}
-	if photo != "" {
-		err = s.us.DeleteMenuFoto(photo)
-		if err != nil {
-			return err
-		}
 	}
 	return nil
 }
