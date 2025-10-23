@@ -202,11 +202,11 @@ func WithTransaction[P any](db *sqlx.DB, fn func(tx *sqlx.Tx, args P) error, arg
 		return err
 	}
 
-	// rollback kalau ada panic atau error
+	// Roll back if there is a panic or error
 	defer func() {
 		if p := recover(); p != nil {
 			_ = tx.Rollback()
-			panic(p) // terusin panic biar ga ketelen
+			panic(p) // re-throw the panic to avoid swallowing it
 		} else if err != nil {
 			_ = tx.Rollback()
 		}

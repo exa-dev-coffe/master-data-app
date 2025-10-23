@@ -1,10 +1,10 @@
 package menu
 
 const baseQuery = `SELECT m.id, m.name, m.description, m.price, m.rating, m.photo, m.is_available, COALESCE(c.id, 0) AS category_id, COALESCE(c.name, 'Uncategorized') AS category_name FROM tm_menus m
-LEFT JOIN tm_categories c ON m.category_id = c.id`
+LEFT JOIN tm_categories c ON m.category_id = c.id WHERE m.is_deleted = FALSE`
 
 const baseQueryUncategorized = `SELECT m.id, m.name, m.description, m.price, m.rating, m.photo, m.is_available, COALESCE(c.id, 0) AS category_id, COALESCE(c.name, 'Uncategorized') AS category_name FROM tm_menus m
-	LEFT JOIN tm_categories c ON m.category_id = c.id WHERE m.category_id IS NULL`
+	LEFT JOIN tm_categories c ON m.category_id = c.id WHERE m.category_id IS NULL AND m.is_deleted = FALSE`
 
 var mappingFieds = map[string]string{
 	"id":           "m.id",

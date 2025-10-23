@@ -15,7 +15,7 @@ type Repository interface {
 	getListTablesNoPagination(params common.ParamsListRequest) ([]Table, error)
 	InsertTable(tx *sqlx.Tx, model CreateTableRequest) error
 	UpdateTable(tx *sqlx.Tx, model UpdateTableRequest) error
-	DeleteTable(tx *sqlx.Tx, id int) error
+	DeleteTable(tx *sqlx.Tx, id int, updatedBy int64) error
 	ValidateTable(tableId int64) error
 	GetTablesByIds(tableIds []int) ([]InternalTableResponse, error)
 }
@@ -54,7 +54,7 @@ func (r *tableRepository) GetListTablesPagination(params common.ParamsListReques
 	}
 	// get total data
 	var totalData int
-	countQuery := `SELECT COUNT(*) FROM tm_tables`
+	countQuery := `SELECT COUNT(*) FROM tm_tables WHERE is_deleted = FALSE`
 	countFinalQuery, countArgs := common.BuildCountQuery(countQuery, params, &mappingFieldType)
 	countStmt, err := r.db.PrepareNamed(countFinalQuery)
 
@@ -137,9 +137,9 @@ func (r *tableRepository) UpdateTable(tx *sqlx.Tx, model UpdateTableRequest) err
 	return nil
 }
 
-func (r *tableRepository) DeleteTable(tx *sqlx.Tx, id int) error {
-	query := `DELETE FROM tm_tables WHERE id = $1`
-	result, err := tx.Exec(query, id)
+func (r *tableRepository) DeleteTable(tx *sqlx.Tx, id int, updatedBy int64) error {
+	query := `UPDATE tm_tables SET deleted_at = NOW(), deleted_by = $2, is_deleted = TRUE WHERE id = $1`
+	result, err := tx.Exec(query, id, updatedBy)
 	if err != nil {
 		log.Error("Failed to delete table:", err)
 		return response.InternalServerError("Failed to delete table", nil)

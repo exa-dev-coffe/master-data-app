@@ -139,6 +139,13 @@ func (h *handler) DeleteMenu(c *fiber.Ctx) error {
 		return err
 	}
 
+	claims, err := common.GetClaimsFromLocals(c)
+	if err != nil {
+		return err
+	}
+
+	request.UpdatedBy = claims.UserId
+
 	err = common.WithTransaction[*common.OneRequest](h.db, h.service.DeleteMenu, request)
 	if err != nil {
 		return err
