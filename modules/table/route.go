@@ -107,11 +107,18 @@ func (h *handler) UpdateTable(c *fiber.Ctx) error {
 }
 
 func (h *handler) DeleteTable(c *fiber.Ctx) error {
-	requestId, err := common.GetOneDataRequest(c)
+	req, err := common.GetOneDataRequest(c)
 	if err != nil {
 		return err
 	}
-	err = common.WithTransaction[int](h.db, h.service.DeleteTable, requestId.Id)
+
+	claims, err := common.GetClaimsFromLocals(c)
+	if err != nil {
+		return err
+	}
+
+	req.UpdatedBy = claims.UserId
+	err = common.WithTransaction[*common.OneRequest](h.db, h.service.DeleteTable, req)
 	if err != nil {
 		return err
 	}

@@ -20,7 +20,8 @@ type Sort struct {
 }
 
 type OneRequest struct {
-	Id int `query:"id" validate:"required"`
+	Id        int `query:"id" validate:"required"`
+	UpdatedBy int64
 }
 
 type DeleteImageRequest struct {

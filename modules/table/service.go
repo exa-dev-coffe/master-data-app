@@ -11,7 +11,7 @@ type Service interface {
 	GetListTablesNoPagination(request common.ParamsListRequest) ([]Table, error)
 	InsertTable(tx *sqlx.Tx, table CreateTableRequest) error
 	UpdateTable(tx *sqlx.Tx, table UpdateTableRequest) error
-	DeleteTable(tx *sqlx.Tx, id int) error
+	DeleteTable(tx *sqlx.Tx, id *common.OneRequest) error
 	ValidateTable(tableId int64) error
 	GetTablesByIds(tableIds []int) ([]InternalTableResponse, error)
 }
@@ -41,8 +41,8 @@ func (s *tableService) UpdateTable(tx *sqlx.Tx, table UpdateTableRequest) error 
 	return s.repo.UpdateTable(tx, table)
 }
 
-func (s *tableService) DeleteTable(tx *sqlx.Tx, id int) error {
-	return s.repo.DeleteTable(tx, id)
+func (s *tableService) DeleteTable(tx *sqlx.Tx, req *common.OneRequest) error {
+	return s.repo.DeleteTable(tx, req.Id, req.UpdatedBy)
 }
 
 func (s *tableService) ValidateTable(tableId int64) error {
