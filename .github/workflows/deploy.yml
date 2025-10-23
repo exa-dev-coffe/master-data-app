@@ -29,7 +29,7 @@ jobs:
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -p 31080 -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
           
-          ssh -p 31086 -i ~/.ssh/id_ed25519 deploy@${{ secrets.VPS_HOST }} << 'EOF'
+          ssh -p 31080 -i ~/.ssh/id_ed25519 deploy@${{ secrets.VPS_HOST }} << 'EOF'
             docker login ghcr.io -u ${{ github.repository_owner }} -p '${{ secrets.GHCR_TOKEN }}'
             docker pull ghcr.io/${{ github.repository_owner }}/master-data-service-coffe:latest
             docker stop master-data-service-coffe || true && docker rm master-data-service-coffe || true 
