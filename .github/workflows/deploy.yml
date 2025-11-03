@@ -35,6 +35,7 @@ jobs:
             docker stop master-data-service-coffe || true && docker rm master-data-service-coffe || true 
           
             docker run --env-file /home/deploy/env_project/coffe/master_data_service/.env -d --name master-data-service-coffe --network coffe-net -p 8001:8001 --memory="512m" --cpus="1.0" --restart=on-failure:5 ghcr.io/${{ github.repository_owner }}/master-data-service-coffe:latest
+            export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
             cd kube_config/coffe
             kubectl apply -f master-data-service.yaml
           EOF
