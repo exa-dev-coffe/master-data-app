@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 
 	"eka-dev.cloud/master-data/config"
@@ -25,6 +26,11 @@ import (
 func main() {
 	middleware.InitLogger("master-data")
 	
+	shutdown, err := lib.InitTracer("master-data")
+	if err == nil && shutdown != nil {
+		defer shutdown(context.Background())
+	}
+
 	// Load env
 	initiator()
 
@@ -44,6 +50,7 @@ func initiator() {
 	})
 
 	fiberApp.Use(requestid.New())
+	fiberApp.Use(middleware.TraceMiddleware())
 	fiberApp.Use(middleware.RequestLogger())
 
 	fiberApp.Get("/health", func(c *fiber.Ctx) error {
