@@ -9,7 +9,7 @@ import (
 type Service interface {
 	GetListCategoriesPagination(request common.ParamsListRequest) (*response.Pagination[[]Category], error)
 	GetListCategoriesNoPagination(request common.ParamsListRequest) ([]Category, error)
-	InsertCategory(tx *sqlx.Tx, category CreateCategoryRequest) error
+	InsertCategory(tx *sqlx.Tx, category CreateCategoryRequest) (Category, error)
 	DeleteCategory(tx *sqlx.Tx, request *common.OneRequest) error
 }
 type categoryService struct {
@@ -29,7 +29,7 @@ func (s *categoryService) GetListCategoriesNoPagination(request common.ParamsLis
 	return s.repo.GetListCategoriesNoPagination(request)
 }
 
-func (s *categoryService) InsertCategory(tx *sqlx.Tx, category CreateCategoryRequest) error {
+func (s *categoryService) InsertCategory(tx *sqlx.Tx, category CreateCategoryRequest) (Category, error) {
 	return s.repo.InsertCategory(tx, category)
 }
 

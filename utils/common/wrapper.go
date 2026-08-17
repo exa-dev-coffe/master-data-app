@@ -254,3 +254,32 @@ func GetInfoRowsAffected(result sql.Result) (int64, error) {
 	}
 	return affected, nil
 }
+
+func WithTransactionReturn[P any, R any](db *sqlx.DB, fn func(tx *sqlx.Tx, args P) (R, error), args P) (R, error) {
+	var result R
+	tx, err := db.Beginx()
+	if err != nil {
+		return result, err
+	}
+
+	// Roll back if there is a panic or error
+	defer func() {
+		if p := recover(); p != nil {
+			_ = tx.Rollback()
+			panic(p) // re-throw the panic to avoid swallowing it
+		} else if err != nil {
+			_ = tx.Rollback()
+		}
+	}()
+
+	result, err = fn(tx, args)
+	if err != nil {
+		return result, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return result, err
+	}
+
+	return result, nil
+}

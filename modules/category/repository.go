@@ -10,7 +10,7 @@ import (
 type Repository interface {
 	GetListCategoriesPagination(params common.ParamsListRequest) (*response.Pagination[[]Category], error)
 	GetListCategoriesNoPagination(params common.ParamsListRequest) ([]Category, error)
-	InsertCategory(tx *sqlx.Tx, model CreateCategoryRequest) error
+	InsertCategory(tx *sqlx.Tx, model CreateCategoryRequest) (Category, error)
 	DeleteCategory(tx *sqlx.Tx, id int) error
 }
 
@@ -120,15 +120,16 @@ func (r *categoryRepository) GetListCategoriesNoPagination(params common.ParamsL
 	return record, nil
 }
 
-func (r *categoryRepository) InsertCategory(tx *sqlx.Tx, model CreateCategoryRequest) error {
+func (r *categoryRepository) InsertCategory(tx *sqlx.Tx, model CreateCategoryRequest) (Category, error) {
 	// Implementation here
-	query := `INSERT INTO tm_categories (name, created_by) VALUES ($1, $2)`
-	_, err := tx.Exec(query, model.Name, model.CreatedBy)
+	query := `INSERT INTO tm_categories (name, created_by) VALUES ($1, $2) RETURNING id, name`
+	var category Category
+	err := tx.QueryRowx(query, model.Name, model.CreatedBy).StructScan(&category)
 	if err != nil {
 		log.Error("Failed to insert category:", err)
-		return response.InternalServerError("Failed to insert category", nil)
+		return category, response.InternalServerError("Failed to insert category", nil)
 	}
-	return nil
+	return category, nil
 }
 
 func (r *categoryRepository) DeleteCategory(tx *sqlx.Tx, id int) error {

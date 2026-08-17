@@ -84,12 +84,12 @@ func (h *handler) CreateCategory(c *fiber.Ctx) error {
 
 	request.CreatedBy = claims.UserId
 
-	err = common.WithTransaction[CreateCategoryRequest](h.db, h.service.InsertCategory, request)
+	newCategory, err := common.WithTransactionReturn[CreateCategoryRequest, Category](h.db, h.service.InsertCategory, request)
 	if err != nil {
 		return err
 	}
 
-	return c.Status(fiber.StatusCreated).JSON(response.Success("Category created successfully", nil))
+	return c.Status(fiber.StatusCreated).JSON(response.Success("Category created successfully", newCategory))
 }
 
 func (h *handler) DeleteCategory(c *fiber.Ctx) error {
