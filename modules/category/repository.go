@@ -91,7 +91,7 @@ func (r *categoryRepository) GetListCategoriesNoPagination(params common.ParamsL
 	var record = make([]Category, 0)
 
 	// here
-	baseQuery := `SELECT id, name FROM tm_categories`
+	baseQuery := `SELECT id, name, icon FROM tm_categories`
 
 	finalQuery, args := common.BuildFilterQuery(baseQuery, params, &mappingFieldType, "")
 
@@ -122,9 +122,9 @@ func (r *categoryRepository) GetListCategoriesNoPagination(params common.ParamsL
 
 func (r *categoryRepository) InsertCategory(tx *sqlx.Tx, model CreateCategoryRequest) (Category, error) {
 	// Implementation here
-	query := `INSERT INTO tm_categories (name, created_by) VALUES ($1, $2) RETURNING id, name`
+	query := `INSERT INTO tm_categories (name, icon, created_by) VALUES ($1, $2, $3) RETURNING id, name, icon`
 	var category Category
-	err := tx.QueryRowx(query, model.Name, model.CreatedBy).StructScan(&category)
+	err := tx.QueryRowx(query, model.Name, model.Icon, model.CreatedBy).StructScan(&category)
 	if err != nil {
 		log.Error("Failed to insert category:", err)
 		return category, response.InternalServerError("Failed to insert category", nil)
