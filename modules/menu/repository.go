@@ -41,7 +41,7 @@ func (r *menuRepository) GetListMenusPagination(params common.ParamsListRequest)
 	var record = make([]Menu, 0)
 
 	// here
-	common.BuildMappingField(params, &mappingFieds)
+	common.BuildMappingField(&params, &mappingFieds)
 
 	finalQuery, args := common.BuildFilterQuery(baseQuery, params, &mappingFieldType, "")
 
@@ -107,7 +107,7 @@ func (r *menuRepository) GetListMenusNoPagination(params common.ParamsListReques
 	// Implementation
 	var record = make([]Menu, 0)
 
-	common.BuildMappingField(params, &mappingFieds)
+	common.BuildMappingField(&params, &mappingFieds)
 
 	finalQuery, args := common.BuildFilterQuery(baseQuery, params, &mappingFieldType, "")
 
@@ -199,7 +199,7 @@ func (r *menuRepository) GetListMenusUncategorizedNoPagination(params common.Par
 	// Implementation
 	var record = make([]Menu, 0)
 
-	common.BuildMappingField(params, &mappingFieds)
+	common.BuildMappingField(&params, &mappingFieds)
 
 	finalQuery, args := common.BuildFilterQuery(baseQueryUncategorized, params, &mappingFieldType, "")
 
@@ -234,7 +234,7 @@ func (r *menuRepository) GetListMenusUncategorizedPagination(params common.Param
 	// Implementation
 	var record = make([]Menu, 0)
 
-	common.BuildMappingField(params, &mappingFieds)
+	common.BuildMappingField(&params, &mappingFieds)
 
 	finalQuery, args := common.BuildFilterQuery(baseQueryUncategorized, params, &mappingFieldType, "")
 
