@@ -6,7 +6,7 @@ type CreateMenuRequest struct {
 	Price       float64 `db:"price" json:"price" validate:"required,gt=0"`
 	CategoryID  *int64  `db:"category_id" json:"categoryId"`
 	Photo       string  `db:"photo" json:"photo" validate:"required,url"`
-	IsAvailable *bool   `db:"is_available" json:"isAvailable" validate:"required"`
+	IsAvailable *bool   `db:"is_available" json:"isAvailable"`
 	CreatedBy   int64   `db:"created_by" json:"createdBy"`
 }
 
@@ -17,7 +17,7 @@ type UpdateMenuRequest struct {
 	Price       float64 `db:"price" json:"price" validate:"required,gt=0"`
 	CategoryID  *int64  `db:"category_id" json:"categoryId"`
 	Photo       string  `db:"photo" json:"photo" validate:"required,url"`
-	IsAvailable *bool   `db:"is_available" json:"isAvailable" validate:"required"`
+	IsAvailable *bool   `db:"is_available" json:"isAvailable"`
 	UpdatedBy   int64   `db:"updated_by" json:"updatedBy"`
 }
 
@@ -29,7 +29,7 @@ type SetMenuCategoryRequest struct {
 
 type UpdateMenuAvailabilityRequest struct {
 	Id          int   `json:"id" validate:"required"`
-	IsAvailable *bool `json:"isAvailable" validate:"required"`
+	IsAvailable *bool `json:"isAvailable"`
 	UpdatedBy   int64 `json:"updatedBy"`
 }
 

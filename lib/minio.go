@@ -14,11 +14,16 @@ import (
 var minioClient *minio.Client
 
 func init() {
-	log.Info("Lib initialized minio")
+	log.Info("Minio Init")
 	endpoint := config.Config.MinioEndpoint
 	accessKey := config.Config.MinioAccessKey
 	secretKey := config.Config.MinioSecretKey
 	useSSL := config.Config.MinioUseSSL
+
+	if endpoint == "" {
+		log.Warn("MinIO endpoint is empty, skipping client initialization")
+		return
+	}
 
 	// Initialize minio client object.
 	minioGenerateClient, err := minio.New(endpoint, &minio.Options{
@@ -34,7 +39,14 @@ func init() {
 	log.Info("MinIO client initialized successfully")
 }
 
+func SetMinioClient(client *minio.Client) {
+	minioClient = client
+}
+
 func UploadFile(filePath string, fileHeader *multipart.FileHeader) (string, error) {
+	if minioClient == nil {
+		return "", response.InternalServerError("MinIO client uninitialized", nil)
+	}
 	bucketName := config.Config.MinioBucketName
 	ctx := context.Background()
 
@@ -57,6 +69,9 @@ func UploadFile(filePath string, fileHeader *multipart.FileHeader) (string, erro
 }
 
 func DeleteFile(filePath string) error {
+	if minioClient == nil {
+		return response.InternalServerError("MinIO client uninitialized", nil)
+	}
 	bucketName := config.Config.MinioBucketName
 
 	ctx := context.Background()
