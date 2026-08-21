@@ -2,12 +2,26 @@ package tests
 
 import (
 	"bytes"
+	"encoding/json"
 	"io"
 	"mime/multipart"
 	"net/http/httptest"
 	"net/textproto"
 	"testing"
 )
+
+type uploadResponse struct {
+	Success bool   `json:"success"`
+	Message string `json:"message"`
+	Data    struct {
+		Url string `json:"url"`
+	} `json:"data"`
+}
+
+type genericUploadResponse struct {
+	Success bool   `json:"success"`
+	Message string `json:"message"`
+}
 
 func TestUploadSuite(t *testing.T) {
 	dbConn, teardown := SetupTestPostgres(t)
@@ -49,6 +63,19 @@ func TestUploadSuite(t *testing.T) {
 			respBody, _ := io.ReadAll(resp.Body)
 			t.Fatalf("Expected HTTP 200 OK from MinIO Testcontainer, got %v: %s", resp.StatusCode, string(respBody))
 		}
+
+		respBody, _ := io.ReadAll(resp.Body)
+		var res uploadResponse
+		if err := json.Unmarshal(respBody, &res); err != nil {
+			t.Fatalf("Failed to unmarshal response JSON: %v", err)
+		}
+
+		if !res.Success {
+			t.Errorf("Expected success to be true, got false")
+		}
+		if res.Data.Url == "" {
+			t.Errorf("Expected uploaded file URL in data.url to be non-empty")
+		}
 	})
 
 	t.Run("POST /upload/upload-menu - Missing File 400", func(t *testing.T) {
@@ -70,6 +97,16 @@ func TestUploadSuite(t *testing.T) {
 		if resp.StatusCode != 200 {
 			respBody, _ := io.ReadAll(resp.Body)
 			t.Fatalf("Expected HTTP 200 OK from MinIO Testcontainer, got %v: %s", resp.StatusCode, string(respBody))
+		}
+
+		respBody, _ := io.ReadAll(resp.Body)
+		var res genericUploadResponse
+		if err := json.Unmarshal(respBody, &res); err != nil {
+			t.Fatalf("Failed to unmarshal response JSON: %v", err)
+		}
+
+		if !res.Success {
+			t.Errorf("Expected success to be true, got false")
 		}
 	})
 

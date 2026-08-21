@@ -2,6 +2,7 @@ package tests
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -11,6 +12,34 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 )
+
+type internalMenuData struct {
+	Id          int     `json:"id"`
+	Price       float64 `json:"price"`
+	Name        string  `json:"name"`
+	Description string  `json:"description"`
+	Photo       string  `json:"photo"`
+}
+
+type internalTableData struct {
+	Id   int64  `json:"id"`
+	Name string `json:"name"`
+}
+
+type getAvailableMenusResponse struct {
+	Success bool               `json:"success"`
+	Message string             `json:"message"`
+	Data    []internalMenuData `json:"data"`
+}
+
+type getDataMenusAndTableResponse struct {
+	Success bool   `json:"success"`
+	Message string `json:"message"`
+	Data    struct {
+		Menus  []internalMenuData  `json:"menus"`
+		Tables []internalTableData `json:"tables"`
+	} `json:"data"`
+}
 
 func executeInternalTestRequest(app *fiber.App, method, url, query string, customTimestamp ...string) (*http.Response, error) {
 	timestamp := time.Now().UTC().Format(time.RFC3339)
@@ -58,6 +87,34 @@ func TestInternalSuite(t *testing.T) {
 			respBody, _ := io.ReadAll(resp.Body)
 			t.Fatalf("Expected HTTP 200 OK, got %v: %s", resp.StatusCode, string(respBody))
 		}
+
+		respBody, _ := io.ReadAll(resp.Body)
+		var res getAvailableMenusResponse
+		if err := json.Unmarshal(respBody, &res); err != nil {
+			t.Fatalf("Failed to unmarshal response JSON: %v", err)
+		}
+
+		if !res.Success {
+			t.Errorf("Expected success to be true, got false")
+		}
+		if res.Message != "Success" {
+			t.Errorf("Expected message 'Success', got '%s'", res.Message)
+		}
+		if len(res.Data) == 0 {
+			t.Fatalf("Expected available menus array to be non-empty")
+		}
+
+		// Assert index 0 item details
+		firstMenu := res.Data[0]
+		if firstMenu.Id != 10 {
+			t.Errorf("Expected menu ID 10 for index 0, got %d", firstMenu.Id)
+		}
+		if firstMenu.Name != "Espresso" {
+			t.Errorf("Expected menu name 'Espresso', got '%s'", firstMenu.Name)
+		}
+		if firstMenu.Price != 25000.00 {
+			t.Errorf("Expected price 25000.00, got %f", firstMenu.Price)
+		}
 	})
 
 	t.Run("GET /internal/data-menus-table - Internal Data Menus & Tables List 200", func(t *testing.T) {
@@ -69,6 +126,36 @@ func TestInternalSuite(t *testing.T) {
 		if resp.StatusCode != 200 {
 			respBody, _ := io.ReadAll(resp.Body)
 			t.Fatalf("Expected HTTP 200 OK, got %v: %s", resp.StatusCode, string(respBody))
+		}
+
+		respBody, _ := io.ReadAll(resp.Body)
+		var res getDataMenusAndTableResponse
+		if err := json.Unmarshal(respBody, &res); err != nil {
+			t.Fatalf("Failed to unmarshal response JSON: %v", err)
+		}
+
+		if !res.Success {
+			t.Errorf("Expected success to be true, got false")
+		}
+		if res.Message != "Success" {
+			t.Errorf("Expected message 'Success', got '%s'", res.Message)
+		}
+		if len(res.Data.Menus) == 0 {
+			t.Fatalf("Expected menus array to be non-empty")
+		}
+		if len(res.Data.Tables) == 0 {
+			t.Fatalf("Expected tables array to be non-empty")
+		}
+
+		// Assert index 0 item details for menus and tables
+		firstMenu := res.Data.Menus[0]
+		if firstMenu.Id != 10 || firstMenu.Name != "Espresso" {
+			t.Errorf("Expected menu ID 10 and name 'Espresso', got ID %d and name '%s'", firstMenu.Id, firstMenu.Name)
+		}
+
+		firstTable := res.Data.Tables[0]
+		if firstTable.Id != 1 || firstTable.Name != "Table 1" {
+			t.Errorf("Expected table ID 1 and name 'Table 1', got ID %d and name '%s'", firstTable.Id, firstTable.Name)
 		}
 	})
 
