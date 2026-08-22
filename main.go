@@ -13,6 +13,7 @@ import (
 	"eka-dev.cloud/master-data/modules/category"
 	"eka-dev.cloud/master-data/modules/internalModule"
 	"eka-dev.cloud/master-data/modules/menu"
+	"eka-dev.cloud/master-data/modules/promotion"
 	"eka-dev.cloud/master-data/modules/table"
 	"eka-dev.cloud/master-data/modules/upload"
 	"eka-dev.cloud/master-data/utils/response"
@@ -44,6 +45,9 @@ func main() {
 }
 
 func initiator() {
+	// Initialize Asynq Client for background task scheduling
+	lib.InitAsynq()
+
 	// Initialize the fiber app
 	fiberApp := fiber.New(fiber.Config{
 		ErrorHandler: middleware.ErrorHandler,
@@ -101,6 +105,8 @@ func initiator() {
 	table.NewHandler(fiberApp, db.DB)
 	// Internal
 	internalModule.NewHandler(fiberApp, db.DB)
+	// Promotions
+	promotion.NewHandler(fiberApp, db.DB)
 
 	fiberApp.All("*", func(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusNotFound).JSON(response.NotFound("Route not found", nil))

@@ -87,7 +87,7 @@ func RequireRole(roles ...string) fiber.Handler {
 
 		userRole := claims.Role
 		for _, role := range roles {
-			if userRole == role {
+			if strings.EqualFold(userRole, role) {
 				c.Locals("user", claims)
 				return c.Next()
 			}

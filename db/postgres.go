@@ -45,7 +45,6 @@ func init() {
 
 	log.Println("Database connection established")
 
-	DB = DB
 	// === Run migrations ===
 	driver, err := postgres.WithInstance(DB.DB, &postgres.Config{})
 	if err != nil {

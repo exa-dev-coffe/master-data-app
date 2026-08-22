@@ -23,6 +23,7 @@ import (
 	"eka-dev.cloud/master-data/modules/category"
 	"eka-dev.cloud/master-data/modules/internalModule"
 	"eka-dev.cloud/master-data/modules/menu"
+	"eka-dev.cloud/master-data/modules/promotion"
 	"eka-dev.cloud/master-data/modules/table"
 	"eka-dev.cloud/master-data/modules/upload"
 	"eka-dev.cloud/master-data/utils/common"
@@ -99,6 +100,7 @@ func SetupTestPostgres(t *testing.T) (*sqlx.DB, func()) {
 			SELECT setval(pg_get_serial_sequence('tm_categories', 'id'), COALESCE((SELECT MAX(id) FROM tm_categories), 1) + 1, false);
 			SELECT setval(pg_get_serial_sequence('tm_menus', 'id'), COALESCE((SELECT MAX(id) FROM tm_menus), 1) + 1, false);
 			SELECT setval(pg_get_serial_sequence('tm_tables', 'id'), COALESCE((SELECT MAX(id) FROM tm_tables), 1) + 1, false);
+			SELECT setval(pg_get_serial_sequence('tm_promotions', 'id'), COALESCE((SELECT MAX(id) FROM tm_promotions), 1) + 1, false);
 		`)
 
 		// Set package db.DB global pointer to real test DB
@@ -189,6 +191,7 @@ func SetupTestApp(dbConn *sqlx.DB) *fiber.App {
 	upload.NewHandler(app)
 	table.NewHandler(app, dbConn)
 	internalModule.NewHandler(app, dbConn)
+	promotion.NewHandler(app, dbConn)
 
 	app.All("*", func(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusNotFound).JSON(response.NotFound("Route not found", nil))

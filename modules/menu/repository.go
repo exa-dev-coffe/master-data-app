@@ -182,8 +182,7 @@ func (r *menuRepository) DeleteMenu(tx *sqlx.Tx, id int, updatedBy int64) error 
 
 func (r *menuRepository) GetOneMenu(id int) (*Menu, error) {
 	var menu Menu
-	query := `SELECT m.id, m.name, m.description, m.rating, m.price, m.photo, m.is_available, COALESCE(c.id, 0) AS category_id, COALESCE(c.name, 'Uncategorized') AS category_name FROM tm_menus m
-	LEFT JOIN tm_categories c ON m.category_id = c.id WHERE m.id=$1`
+	query := baseQuery + ` AND m.id = $1`
 	err := r.db.Get(&menu, query, id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -312,8 +311,7 @@ func (r *menuRepository) SetMenuCategory(tx *sqlx.Tx, model SetMenuCategoryReque
 
 func (r *menuRepository) GetMenusByCategoryID(categoryID int) ([]Menu, error) {
 	var menus = make([]Menu, 0)
-	query := `SELECT m.id, m.name, m.description, m.rating, m.price, m.photo, m.is_available, COALESCE(c.id, 0) AS category_id, COALESCE(c.name, 'Uncategorized') AS category_name FROM tm_menus m
-	LEFT JOIN tm_categories c ON m.category_id = c.id WHERE c.id=$1`
+	query := baseQuery + ` AND c.id = $1`
 	err := r.db.Select(&menus, query, categoryID)
 	if err != nil {
 		log.Error("Failed to get menus by category ID:", err)
@@ -342,9 +340,31 @@ func (r *menuRepository) GetAvailableMenusByIds(ids []int) ([]InternalAvailableM
 	}
 
 	query, args, err := sqlx.In(`
-		SELECT id, price, name, is_available
-		FROM tm_menus 
-		WHERE id IN (?)
+		SELECT m.id, m.price, m.is_available, m.name,
+		COALESCE(p.id, 0) AS promo_id, COALESCE(p.name, '') AS promo_name,
+		COALESCE(p.discount_type, '') AS promo_discount_type,
+		COALESCE(p.discount_value, 0) AS promo_discount_value,
+		COALESCE(p.max_discount, 0) AS promo_max_discount
+		FROM tm_menus m
+		LEFT JOIN LATERAL (
+		    SELECT id, name, discount_type, discount_value, max_discount
+		    FROM tm_promotions
+		    WHERE is_active = TRUE AND deleted_at IS NULL
+		      AND start_at <= CURRENT_TIMESTAMP AND end_at >= CURRENT_TIMESTAMP
+		      AND (
+		        (target_type = 'PRODUCT' AND target_id = m.id) OR
+		        (target_type = 'CATEGORY' AND target_id = m.category_id) OR
+		        (target_type = 'ALL')
+		      )
+		    ORDER BY 
+		      CASE target_type 
+		        WHEN 'PRODUCT' THEN 1 
+		        WHEN 'CATEGORY' THEN 2 
+		        WHEN 'ALL' THEN 3 
+		      END ASC
+		    LIMIT 1
+		) p ON TRUE
+		WHERE m.id IN (?) AND m.is_deleted = FALSE
 	`, ids)
 	if err != nil {
 		log.Error("Failed to build query with sqlx.In:", err)
@@ -389,9 +409,31 @@ func (r *menuRepository) GetListMenusByIds(ids []int) ([]InternalMenuResponse, e
 	}
 
 	query, args, err := sqlx.In(`
-		SELECT id, price, name, description, photo
-		FROM tm_menus 
-		WHERE id IN (?)
+		SELECT m.id, m.price, m.name, m.description, m.photo,
+		COALESCE(p.id, 0) AS promo_id, COALESCE(p.name, '') AS promo_name,
+		COALESCE(p.discount_type, '') AS promo_discount_type,
+		COALESCE(p.discount_value, 0) AS promo_discount_value,
+		COALESCE(p.max_discount, 0) AS promo_max_discount
+		FROM tm_menus m
+		LEFT JOIN LATERAL (
+		    SELECT id, name, discount_type, discount_value, max_discount
+		    FROM tm_promotions
+		    WHERE is_active = TRUE AND deleted_at IS NULL
+		      AND start_at <= CURRENT_TIMESTAMP AND end_at >= CURRENT_TIMESTAMP
+		      AND (
+		        (target_type = 'PRODUCT' AND target_id = m.id) OR
+		        (target_type = 'CATEGORY' AND target_id = m.category_id) OR
+		        (target_type = 'ALL')
+		      )
+		    ORDER BY 
+		      CASE target_type 
+		        WHEN 'PRODUCT' THEN 1 
+		        WHEN 'CATEGORY' THEN 2 
+		        WHEN 'ALL' THEN 3 
+		      END ASC
+		    LIMIT 1
+		) p ON TRUE
+		WHERE m.id IN (?) AND m.is_deleted = FALSE
 	`, ids)
 	if err != nil {
 		log.Error("Failed to build query with sqlx.In:", err)
