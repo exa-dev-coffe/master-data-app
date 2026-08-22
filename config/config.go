@@ -27,6 +27,7 @@ type appConfig struct {
 	AllowedOrigins    string
 	RabbitmqUrl       string
 	RedisUrl          string
+	RedisUsername     string
 	RedisPassword     string
 	ServiceMasterDataUrl string
 }
@@ -63,6 +64,7 @@ func init() {
 		AllowedOrigins:       viper.GetString("APP_ALLOWED_ORIGINS"),
 		RabbitmqUrl:          viper.GetString("RABBITMQ_URL"),
 		RedisUrl:             viper.GetString("REDIS_URL"),
+		RedisUsername:        viper.GetString("REDIS_USERNAME"),
 		RedisPassword:        viper.GetString("REDIS_PASSWORD"),
 		ServiceMasterDataUrl: viper.GetString("SERVICE_MASTER_DATA_URL"),
 	}

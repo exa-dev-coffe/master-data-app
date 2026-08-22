@@ -15,6 +15,7 @@ func InitAsynq() {
 	}
 	redisOpt := asynq.RedisClientOpt{
 		Addr:     redisUrl,
+		Username: config.Config.RedisUsername,
 		Password: config.Config.RedisPassword,
 	}
 	AsynqClient = asynq.NewClient(redisOpt)
