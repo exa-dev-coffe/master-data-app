@@ -3,13 +3,13 @@ package promotion
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"eka-dev.cloud/master-data/config"
 	"eka-dev.cloud/master-data/lib"
 	"eka-dev.cloud/master-data/utils/common"
 	"eka-dev.cloud/master-data/utils/response"
-	"github.com/gofiber/fiber/v2/log"
 	"github.com/hibiken/asynq"
 	"github.com/jmoiron/sqlx"
 )
@@ -82,13 +82,13 @@ func schedulePromotionTasks(id int64, startAtStr, endAtStr string) {
 			task := asynq.NewTask("task:http_post", payload)
 			_, err = lib.AsynqClient.Enqueue(task, asynq.ProcessAt(startTime))
 			if err != nil {
-				log.Error("Failed to enqueue promotion activation task in Asynq: ", err)
+				slog.Error("Failed to enqueue promotion activation task in Asynq", "error", err)
 			} else {
-				log.Infof("Scheduled Asynq activation task for Promotion ID %d at %s", id, startTime.Format(time.RFC3339))
+				slog.Info("Scheduled Asynq activation task", "promotion_id", id, "time", startTime.Format(time.RFC3339))
 			}
 		}
 	} else if err != nil {
-		log.Error("Failed to parse startAt time for Asynq scheduling: ", err)
+		slog.Error("Failed to parse startAt time for Asynq scheduling", "error", err)
 	}
 
 	// 2. Schedule Asynq task for automatic promotion DEACTIVATION at EndAt (if in future)
@@ -102,13 +102,13 @@ func schedulePromotionTasks(id int64, startAtStr, endAtStr string) {
 			task := asynq.NewTask("task:http_post", payload)
 			_, err = lib.AsynqClient.Enqueue(task, asynq.ProcessAt(endTime))
 			if err != nil {
-				log.Error("Failed to enqueue promotion deactivation task in Asynq: ", err)
+				slog.Error("Failed to enqueue promotion deactivation task in Asynq", "error", err)
 			} else {
-				log.Infof("Scheduled Asynq deactivation task for Promotion ID %d at %s", id, endTime.Format(time.RFC3339))
+				slog.Info("Scheduled Asynq deactivation task", "promotion_id", id, "time", endTime.Format(time.RFC3339))
 			}
 		}
 	} else if err != nil {
-		log.Error("Failed to parse endAt time for Asynq scheduling: ", err)
+		slog.Error("Failed to parse endAt time for Asynq scheduling", "error", err)
 	}
 }
 
@@ -134,7 +134,7 @@ func (s *service) CreatePromotion(tx *sqlx.Tx, req CreatePromotionRequest) (int6
 		return 0, response.InternalServerError("Failed to check promotion overlap", errOverlap)
 	}
 	if existing != nil {
-		return 0, response.BadRequest(fmt.Sprintf("Sudah terdapat promosi pada rentang tanggal ini untuk target tersebut (%s)", existing.Name), nil)
+		return 0, response.BadRequest(fmt.Sprintf("A promotion already exists in this date range for this target (%s)", existing.Name), nil)
 	}
 
 	// Determine initial isActive state based on StartAt
@@ -184,7 +184,7 @@ func (s *service) UpdatePromotion(tx *sqlx.Tx, req UpdatePromotionRequest) error
 		return response.InternalServerError("Failed to check promotion overlap", errOverlap)
 	}
 	if existing != nil {
-		return response.BadRequest(fmt.Sprintf("Sudah terdapat promosi pada rentang tanggal ini untuk target tersebut (%s)", existing.Name), nil)
+		return response.BadRequest(fmt.Sprintf("A promotion already exists in this date range for this target (%s)", existing.Name), nil)
 	}
 
 	err := s.repo.UpdatePromotion(tx, req)

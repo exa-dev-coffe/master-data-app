@@ -3,10 +3,10 @@ package table
 import (
 	"database/sql"
 	"errors"
+	"log/slog"
 
 	"eka-dev.cloud/master-data/utils/common"
 	"eka-dev.cloud/master-data/utils/response"
-	"github.com/gofiber/fiber/v2/log"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -34,20 +34,20 @@ func (r *tableRepository) GetListTablesPagination(params common.ParamsListReques
 	finalQuery, args := common.BuildFilterQuery(baseQuery, params, &mappingFieldType, "")
 	rows, err := r.db.NamedQuery(finalQuery, args)
 	if err != nil {
-		log.Error("Failed to execute query:", err)
+		slog.Error("Failed to execute query", "error", err)
 		return nil, response.InternalServerError("Failed to execute query", nil)
 	}
 	defer func(rows *sqlx.Rows) {
 		err := rows.Close()
 		if err != nil {
-			log.Error("failed to close rows:", err)
+			slog.Error("failed to close rows", "error", err)
 			return
 		}
 	}(rows)
 	for rows.Next() {
 		var table Table
 		if err := rows.StructScan(&table); err != nil {
-			log.Error("Failed to scan table:", err)
+			slog.Error("Failed to scan table", "error", err)
 			return nil, err
 		}
 		record = append(record, table)
@@ -59,19 +59,19 @@ func (r *tableRepository) GetListTablesPagination(params common.ParamsListReques
 	countStmt, err := r.db.PrepareNamed(countFinalQuery)
 
 	if err != nil {
-		log.Error("Failed to prepare count statement:", err)
+		slog.Error("Failed to prepare count statement", "error", err)
 		return nil, response.InternalServerError("Failed to prepare count statement", nil)
 	}
 	defer func(countStmt *sqlx.NamedStmt) {
 		err := countStmt.Close()
 		if err != nil {
-			log.Error("failed to close count statement:", err)
+			slog.Error("failed to close count statement", "error", err)
 			return
 		}
 	}(countStmt)
 	err = countStmt.Get(&totalData, countArgs)
 	if err != nil {
-		log.Error("Failed to get total data:", err)
+		slog.Error("Failed to get total data", "error", err)
 		return nil, response.InternalServerError("Failed to get total data", nil)
 	}
 	pagination := response.Pagination[[]Table]{
@@ -92,20 +92,20 @@ func (r *tableRepository) getListTablesNoPagination(params common.ParamsListRequ
 	finalQuery, args := common.BuildFilterQuery(baseQuery, params, &mappingFieldType, "")
 	rows, err := r.db.NamedQuery(finalQuery, args)
 	if err != nil {
-		log.Error("Failed to execute query:", err)
+		slog.Error("Failed to execute query", "error", err)
 		return nil, response.InternalServerError("Failed to execute query", nil)
 	}
 	defer func(rows *sqlx.Rows) {
 		err := rows.Close()
 		if err != nil {
-			log.Error("failed to close rows:", err)
+			slog.Error("failed to close rows", "error", err)
 			return
 		}
 	}(rows)
 	for rows.Next() {
 		var table Table
 		if err := rows.StructScan(&table); err != nil {
-			log.Error("Failed to scan table:", err)
+			slog.Error("Failed to scan table", "error", err)
 			return nil, err
 		}
 		record = append(record, table)
@@ -117,7 +117,7 @@ func (r *tableRepository) InsertTable(tx *sqlx.Tx, model CreateTableRequest) err
 	query := `INSERT INTO tm_tables (name, created_at, updated_at, created_by) VALUES ($1, NOW(), NOW(), $2)`
 	_, err := tx.Exec(query, model.Name, model.CreatedBy)
 	if err != nil {
-		log.Error("Failed to insert table:", err)
+		slog.Error("Failed to insert table", "error", err)
 		return response.InternalServerError("Failed to insert table", nil)
 	}
 	return nil
@@ -127,7 +127,7 @@ func (r *tableRepository) UpdateTable(tx *sqlx.Tx, model UpdateTableRequest) err
 	query := `UPDATE tm_tables SET name = $1, updated_at = NOW(), updated_by = $2 WHERE id = $3`
 	result, err := tx.Exec(query, model.Name, model.UpdatedBy, model.Id)
 	if err != nil {
-		log.Error("Failed to update table:", err)
+		slog.Error("Failed to update table", "error", err)
 		return response.InternalServerError("Failed to update table", nil)
 	}
 	err = validateAffectedRows(result)
@@ -141,7 +141,7 @@ func (r *tableRepository) DeleteTable(tx *sqlx.Tx, id int, updatedBy int64) erro
 	query := `UPDATE tm_tables SET deleted_at = NOW(), deleted_by = $2, is_deleted = TRUE WHERE id = $1`
 	result, err := tx.Exec(query, id, updatedBy)
 	if err != nil {
-		log.Error("Failed to delete table:", err)
+		slog.Error("Failed to delete table", "error", err)
 		return response.InternalServerError("Failed to delete table", nil)
 	}
 	err = validateAffectedRows(result)
@@ -160,7 +160,7 @@ func (r *tableRepository) ValidateTable(tableId int64) error {
 		if errors.Is(err, sql.ErrNoRows) {
 			return response.BadRequest("Table not found", nil)
 		}
-		log.Error("Failed to validate table:", err)
+		slog.Error("Failed to validate table", "error", err)
 		return response.InternalServerError("Failed to validate table", nil)
 	}
 	return nil
@@ -172,7 +172,7 @@ func (r *tableRepository) GetTablesByIds(tableIds []int) ([]InternalTableRespons
 	query, args, err := sqlx.In(`SELECT id, name FROM tm_tables WHERE id IN (?)`, tableIds)
 
 	if err != nil {
-		log.Error("Failed to build query:", err)
+		slog.Error("Failed to build query", "error", err)
 		return nil, response.InternalServerError("Failed to build query", nil)
 	}
 
@@ -180,7 +180,7 @@ func (r *tableRepository) GetTablesByIds(tableIds []int) ([]InternalTableRespons
 
 	err = r.db.Select(&tables, query, args...)
 	if err != nil {
-		log.Error("Failed to get table by ids:", err)
+		slog.Error("Failed to get table by ids", "error", err)
 		return nil, response.InternalServerError("Failed to get table by ids", nil)
 	}
 

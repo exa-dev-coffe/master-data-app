@@ -3,12 +3,12 @@ package lib
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"sync"
 	"time"
 
 	"eka-dev.cloud/master-data/config"
 	"eka-dev.cloud/master-data/utils/response"
-	"github.com/gofiber/fiber/v2/log"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -64,16 +64,16 @@ func GetConnection() *amqp.Connection {
 		return conn
 	}
 
-	// retry loop kalau gagal
+	// retry loop if failed
 	for {
 		c, err := amqp.Dial(config.Config.RabbitmqUrl)
 		if err != nil {
-			log.Error("❌ Failed to connect to RabbitMQ, retrying in 5s:", err)
+			slog.Error("Failed to connect to RabbitMQ, retrying in 5s", "error", err)
 			time.Sleep(5 * time.Second)
 			continue
 		}
 		conn = c
-		log.Info("✅ Connected to RabbitMQ")
+		slog.Info("Connected to RabbitMQ")
 		break
 	}
 
@@ -111,7 +111,7 @@ func SendMessage(
 			false, // noWait
 			nil,   // args
 		); err != nil {
-			log.Error("Failed to declare exchange:", err)
+			slog.Error("Failed to declare exchange", "error", err)
 			return response.InternalServerError("Failed to declare exchange", nil)
 		}
 	}
@@ -126,7 +126,7 @@ func SendMessage(
 			false,
 			props,
 		); err != nil {
-			log.Error("Failed to publish message:", err)
+			slog.Error("Failed to publish message", "error", err)
 			return response.InternalServerError("Failed to publish message", nil)
 		}
 
@@ -140,7 +140,7 @@ func SendMessage(
 			false,   // noWait
 			headers, // args
 		); err != nil {
-			log.Error("Failed to declare queue:", err)
+			slog.Error("Failed to declare queue", "error", err)
 			return response.InternalServerError("Failed to declare queue", nil)
 		}
 
@@ -153,7 +153,7 @@ func SendMessage(
 				false,
 				nil,
 			); err != nil {
-				log.Error("Failed to bind queue:", err)
+				slog.Error("Failed to bind queue", "error", err)
 				return response.InternalServerError("Failed to bind queue", nil)
 			}
 		}
@@ -183,18 +183,17 @@ func SendMessage(
 		); err != nil {
 			span.RecordError(err)
 			span.SetStatus(codes.Error, err.Error())
-			log.Error("Failed to publish message:", err)
+			slog.Error("Failed to publish message", "error", err)
 			return response.InternalServerError("Failed to publish message", nil)
 		}
 		span.SetStatus(codes.Ok, "")
 
 	default:
-		log.Errorf("[!] Unsupported exchange type: %v\n", exchangeType)
+		slog.Error("Unsupported exchange type", "exchange_type", exchangeType)
 		return nil
 	}
 
-	log.Infof("[x] Sent '%s' to exchange='%s', queue='%s', routingKey='%s', type='%s'\n",
-		message, exchange, queueName, routingKey, exchangeType)
+	slog.Info("Sent message", "exchange", exchange, "queue", queueName, "routing_key", routingKey, "type", exchangeType)
 
 	return nil
 }
@@ -272,8 +271,7 @@ func ListenQueue(
 		return err
 	}
 
-	log.Infof("[*] Listening queue '%s' (exchange='%s', routingKey='%s', consumer=%s)...",
-		q.Name, exchange, routingKey, consumerName)
+	slog.Info("Listening queue", "queue", q.Name, "exchange", exchange, "routing_key", routingKey, "consumer", consumerName)
 
 	go func() {
 		tracer := otel.GetTracerProvider().Tracer("rabbitmq-client")
@@ -300,11 +298,11 @@ func ListenQueue(
 			if err := handler(msg); err != nil {
 				span.RecordError(err)
 				span.SetStatus(codes.Error, err.Error())
-				log.Errorf("[!] Handler error: %v", err)
+				slog.Error("Handler error", "error", err)
 				if !autoAck {
 					err = msg.Nack(false, true)
 					if err != nil {
-						log.Errorf("[!] Nack error: %v", err)
+						slog.Error("Nack error", "error", err)
 					}
 				}
 			} else {
@@ -312,7 +310,7 @@ func ListenQueue(
 				if !autoAck {
 					err = msg.Ack(false)
 					if err != nil {
-						log.Errorf("[!] Ack error: %v", err)
+						slog.Error("Ack error", "error", err)
 					}
 				}
 			}

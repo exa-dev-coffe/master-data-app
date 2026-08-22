@@ -3,10 +3,10 @@ package menu
 import (
 	"database/sql"
 	"errors"
+	"log/slog"
 
 	"eka-dev.cloud/master-data/utils/common"
 	"eka-dev.cloud/master-data/utils/response"
-	"github.com/gofiber/fiber/v2/log"
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
 )
@@ -47,21 +47,21 @@ func (r *menuRepository) GetListMenusPagination(params common.ParamsListRequest)
 
 	rows, err := r.db.NamedQuery(finalQuery, args)
 	if err != nil {
-		log.Error("Failed to execute query:", err)
+		slog.Error("Failed to execute query", "error", err)
 		return nil, response.InternalServerError("Failed to execute query", nil)
 	}
 
 	defer func(rows *sqlx.Rows) {
 		err := rows.Close()
 		if err != nil {
-			log.Error("failed to close rows:", err)
+			slog.Error("failed to close rows", "error", err)
 			return
 		}
 	}(rows)
 	for rows.Next() {
 		var menu Menu
 		if err := rows.StructScan(&menu); err != nil {
-			log.Error("Failed to scan menu:", err)
+			slog.Error("Failed to scan menu", "error", err)
 			return nil, err
 		}
 		record = append(record, menu)
@@ -74,19 +74,19 @@ func (r *menuRepository) GetListMenusPagination(params common.ParamsListRequest)
 	countStmt, err := r.db.PrepareNamed(countFinalQuery)
 
 	if err != nil {
-		log.Error("Failed to prepare count query:", err)
+		slog.Error("Failed to prepare count query", "error", err)
 		return nil, response.InternalServerError("Failed to prepare count query", nil)
 	}
 	defer func(countStmt *sqlx.NamedStmt) {
 		err := countStmt.Close()
 		if err != nil {
-			log.Error("failed to close count statement:", err)
+			slog.Error("failed to close count statement", "error", err)
 			return
 		}
 	}(countStmt)
 
 	if err := countStmt.Get(&totalData, countArgs); err != nil {
-		log.Error("Failed to execute count query:", err)
+		slog.Error("Failed to execute count query", "error", err)
 		return nil, response.InternalServerError("Failed to execute count query", nil)
 	}
 
@@ -113,14 +113,14 @@ func (r *menuRepository) GetListMenusNoPagination(params common.ParamsListReques
 
 	rows, err := r.db.NamedQuery(finalQuery, args)
 	if err != nil {
-		log.Error("Failed to execute query:", err)
+		slog.Error("Failed to execute query", "error", err)
 		return nil, response.InternalServerError("Failed to execute query", nil)
 	}
 
 	defer func(rows *sqlx.Rows) {
 		err := rows.Close()
 		if err != nil {
-			log.Error("failed to close rows:", err)
+			slog.Error("failed to close rows", "error", err)
 			return
 		}
 	}(rows)
@@ -128,7 +128,7 @@ func (r *menuRepository) GetListMenusNoPagination(params common.ParamsListReques
 	for rows.Next() {
 		var menu Menu
 		if err := rows.StructScan(&menu); err != nil {
-			log.Error("Failed to scan menu:", err)
+			slog.Error("Failed to scan menu", "error", err)
 			return nil, response.InternalServerError("Failed to scan menu", nil)
 		}
 		record = append(record, menu)
@@ -142,7 +142,7 @@ func (r *menuRepository) InsertMenu(tx *sqlx.Tx, model CreateMenuRequest) error 
 	query := `INSERT INTO tm_menus ( name, description, price, category_id, photo, is_available, created_by) VALUES ( $1, $2, $3, $4, $5, $6, $7)`
 	_, err := tx.Exec(query, model.Name, model.Description, model.Price, model.CategoryID, model.Photo, model.IsAvailable, model.CreatedBy)
 	if err != nil {
-		log.Error("Failed to insert menu:", err)
+		slog.Error("Failed to insert menu", "error", err)
 		return checkErrorConstraint(err, "Failed to insert menu")
 	}
 	return nil
@@ -153,7 +153,7 @@ func (r *menuRepository) UpdateMenu(tx *sqlx.Tx, model UpdateMenuRequest) error 
 	query := `UPDATE tm_menus SET name=$1, description=$2, price=$3, category_id=$4, photo=$5, is_available=$6, updated_by=$7, updated_at=NOW() WHERE id=$8`
 	info, err := tx.Exec(query, model.Name, model.Description, model.Price, model.CategoryID, model.Photo, model.IsAvailable, model.UpdatedBy, model.Id)
 	if err != nil {
-		log.Error("Failed to update menu:", err)
+		slog.Error("Failed to update menu", "error", err)
 		return checkErrorConstraint(err, "Failed to update menu")
 	}
 	err = validateAffectedRows(info)
@@ -169,7 +169,7 @@ func (r *menuRepository) DeleteMenu(tx *sqlx.Tx, id int, updatedBy int64) error 
 
 	info, err := tx.Exec(query, id, updatedBy)
 	if err != nil {
-		log.Error("Failed to delete menu:", err)
+		slog.Error("Failed to delete menu", "error", err)
 		return response.InternalServerError("Failed to delete menu", nil)
 	}
 	err = validateAffectedRows(info)
@@ -188,7 +188,7 @@ func (r *menuRepository) GetOneMenu(id int) (*Menu, error) {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, response.NotFound("Menu not found", nil)
 		}
-		log.Error("Failed to get menu:", err)
+		slog.Error("Failed to get menu", "error", err)
 		return nil, response.InternalServerError("Failed to get menu", nil)
 	}
 	return &menu, nil
@@ -205,14 +205,14 @@ func (r *menuRepository) GetListMenusUncategorizedNoPagination(params common.Par
 	rows, err := r.db.NamedQuery(finalQuery, args)
 
 	if err != nil {
-		log.Error("Failed to execute query:", err)
+		slog.Error("Failed to execute query", "error", err)
 		return nil, response.InternalServerError("Failed to execute query", nil)
 	}
 
 	defer func(rows *sqlx.Rows) {
 		err := rows.Close()
 		if err != nil {
-			log.Error("failed to close rows:", err)
+			slog.Error("failed to close rows", "error", err)
 			return
 		}
 	}(rows)
@@ -220,7 +220,7 @@ func (r *menuRepository) GetListMenusUncategorizedNoPagination(params common.Par
 	for rows.Next() {
 		var menu Menu
 		if err := rows.StructScan(&menu); err != nil {
-			log.Error("Failed to scan menu:", err)
+			slog.Error("Failed to scan menu", "error", err)
 			return nil, response.InternalServerError("Failed to scan menu", nil)
 		}
 		record = append(record, menu)
@@ -239,21 +239,21 @@ func (r *menuRepository) GetListMenusUncategorizedPagination(params common.Param
 
 	rows, err := r.db.NamedQuery(finalQuery, args)
 	if err != nil {
-		log.Error("Failed to execute query:", err)
+		slog.Error("Failed to execute query", "error", err)
 		return nil, response.InternalServerError("Failed to execute query", nil)
 	}
 
 	defer func(rows *sqlx.Rows) {
 		err := rows.Close()
 		if err != nil {
-			log.Error("failed to close rows:", err)
+			slog.Error("failed to close rows", "error", err)
 			return
 		}
 	}(rows)
 	for rows.Next() {
 		var menu Menu
 		if err := rows.StructScan(&menu); err != nil {
-			log.Error("Failed to scan menu:", err)
+			slog.Error("Failed to scan menu", "error", err)
 			return nil, err
 		}
 		record = append(record, menu)
@@ -266,19 +266,19 @@ func (r *menuRepository) GetListMenusUncategorizedPagination(params common.Param
 	countStmt, err := r.db.PrepareNamed(countFinalQuery)
 
 	if err != nil {
-		log.Error("Failed to prepare count query:", err)
+		slog.Error("Failed to prepare count query", "error", err)
 		return nil, response.InternalServerError("Failed to prepare count query", nil)
 	}
 	defer func(countStmt *sqlx.NamedStmt) {
 		err := countStmt.Close()
 		if err != nil {
-			log.Error("failed to close count statement:", err)
+			slog.Error("failed to close count statement", "error", err)
 			return
 		}
 	}(countStmt)
 
 	if err := countStmt.Get(&totalData, countArgs); err != nil {
-		log.Error("Failed to execute count query:", err)
+		slog.Error("Failed to execute count query", "error", err)
 		return nil, response.InternalServerError("Failed to execute count query", nil)
 	}
 
@@ -299,7 +299,7 @@ func (r *menuRepository) SetMenuCategory(tx *sqlx.Tx, model SetMenuCategoryReque
 	query := `UPDATE tm_menus SET category_id=$1, updated_by=$2, updated_at=NOW() WHERE id=$3`
 	info, err := tx.Exec(query, model.CategoryId, model.UpdatedBy, model.Id)
 	if err != nil {
-		log.Error("Failed to set menu category:", err)
+		slog.Error("Failed to set menu category", "error", err)
 		return checkErrorConstraint(err, "Failed to set menu category")
 	}
 	err = validateAffectedRows(info)
@@ -314,7 +314,7 @@ func (r *menuRepository) GetMenusByCategoryID(categoryID int) ([]Menu, error) {
 	query := baseQuery + ` AND c.id = $1`
 	err := r.db.Select(&menus, query, categoryID)
 	if err != nil {
-		log.Error("Failed to get menus by category ID:", err)
+		slog.Error("Failed to get menus by category ID", "error", err)
 		return nil, response.InternalServerError("Failed to get menus by category ID", nil)
 	}
 	return menus, nil
@@ -324,7 +324,7 @@ func (r *menuRepository) UpdateMenuAvailability(tx *sqlx.Tx, id int, isAvailable
 	query := `UPDATE tm_menus SET is_available=$1, updated_by=$2, updated_at=NOW() WHERE id=$3`
 	info, err := tx.Exec(query, isAvailable, updatedBy, id)
 	if err != nil {
-		log.Error("Failed to update menu availability:", err)
+		slog.Error("Failed to update menu availability", "error", err)
 		return response.InternalServerError("Failed to update menu availability", nil)
 	}
 	err = validateAffectedRows(info)
@@ -367,7 +367,7 @@ func (r *menuRepository) GetAvailableMenusByIds(ids []int) ([]InternalAvailableM
 		WHERE m.id IN (?) AND m.is_deleted = FALSE
 	`, ids)
 	if err != nil {
-		log.Error("Failed to build query with sqlx.In:", err)
+		slog.Error("Failed to build query with sqlx.In", "error", err)
 		return nil, response.InternalServerError("Failed to build query", nil)
 	}
 
@@ -375,7 +375,7 @@ func (r *menuRepository) GetAvailableMenusByIds(ids []int) ([]InternalAvailableM
 
 	var menus []InternalAvailableMenuResponse
 	if err := r.db.Select(&menus, query, args...); err != nil {
-		log.Error("Failed to get menus by IDs:", err)
+		slog.Error("Failed to get menus by IDs", "error", err)
 		return nil, response.InternalServerError("Failed to get menus by IDs", nil)
 	}
 
@@ -436,7 +436,7 @@ func (r *menuRepository) GetListMenusByIds(ids []int) ([]InternalMenuResponse, e
 		WHERE m.id IN (?) AND m.is_deleted = FALSE
 	`, ids)
 	if err != nil {
-		log.Error("Failed to build query with sqlx.In:", err)
+		slog.Error("Failed to build query with sqlx.In", "error", err)
 		return nil, response.InternalServerError("Failed to build query", nil)
 	}
 
@@ -445,7 +445,7 @@ func (r *menuRepository) GetListMenusByIds(ids []int) ([]InternalMenuResponse, e
 	var menus []InternalMenuResponse
 
 	if err := r.db.Select(&menus, query, args...); err != nil {
-		log.Error("Failed to get menus by IDs:", err)
+		slog.Error("Failed to get menus by IDs", "error", err)
 		return nil, response.InternalServerError("Failed to get menus by IDs", nil)
 	}
 
@@ -470,7 +470,7 @@ func (r *menuRepository) UpdateRatingAndReviewCount(tx *sqlx.Tx, id int, rating 
 		WHERE id = $3`
 	info, err := tx.Exec(query, rating, updatedBy, id)
 	if err != nil {
-		log.Error("Failed to update menu rating and review count:", err)
+		slog.Error("Failed to update menu rating and review count", "error", err)
 		return response.InternalServerError("Failed to update menu rating and review count", nil)
 	}
 	err = validateAffectedRows(info)

@@ -1,13 +1,14 @@
 package menu
 
 import (
+	"log/slog"
+
 	"eka-dev.cloud/master-data/lib"
 	"eka-dev.cloud/master-data/middleware"
 	"eka-dev.cloud/master-data/modules/upload"
 	"eka-dev.cloud/master-data/utils/common"
 	"eka-dev.cloud/master-data/utils/response"
 	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/log"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -80,7 +81,7 @@ func (h *handler) CreateMenu(c *fiber.Ctx) error {
 	var request CreateMenuRequest
 	err := c.BodyParser(&request)
 	if err != nil {
-		log.Error("Error parsing request body: ", err)
+		slog.Error("Error parsing request body", "error", err)
 		return response.BadRequest("Invalid request body", err)
 	}
 
@@ -109,7 +110,7 @@ func (h *handler) UpdateMenu(c *fiber.Ctx) error {
 
 	err := c.BodyParser(&request)
 	if err != nil {
-		log.Error("Error parsing request body:", err)
+		slog.Error("Error parsing request body", "error", err)
 		return response.BadRequest("Invalid request body", nil)
 	}
 
@@ -201,7 +202,7 @@ func (h *handler) SetMenuCategory(c *fiber.Ctx) error {
 	var request SetMenuCategoryRequest
 	err := c.BodyParser(&request)
 	if err != nil {
-		log.Error("Error parsing request body: ", err)
+		slog.Error("Error parsing request body", "error", err)
 		return response.BadRequest("Invalid request body", err)
 	}
 
@@ -243,7 +244,7 @@ func (h *handler) UpdateMenuAvailability(c *fiber.Ctx) error {
 	var request UpdateMenuAvailabilityRequest
 	err := c.BodyParser(&request)
 	if err != nil {
-		log.Error("Error parsing request body: ", err)
+		slog.Error("Error parsing request body", "error", err)
 		return response.BadRequest("Invalid request body", err)
 	}
 

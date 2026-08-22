@@ -1,12 +1,13 @@
 package category
 
 import (
+	"log/slog"
+
 	"eka-dev.cloud/master-data/lib"
 	"eka-dev.cloud/master-data/middleware"
 	"eka-dev.cloud/master-data/utils/common"
 	"eka-dev.cloud/master-data/utils/response"
 	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/log"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -68,7 +69,7 @@ func (h *handler) CreateCategory(c *fiber.Ctx) error {
 	var request CreateCategoryRequest
 	err := c.BodyParser(&request)
 	if err != nil {
-		log.Error("Error parsing request body: ", err)
+		slog.Error("Error parsing request body", "error", err)
 		return response.BadRequest("Invalid request body", nil)
 	}
 

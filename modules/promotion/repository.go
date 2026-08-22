@@ -3,11 +3,11 @@ package promotion
 import (
 	"database/sql"
 	"errors"
+	"log/slog"
 	"time"
 
 	"eka-dev.cloud/master-data/utils/common"
 	"eka-dev.cloud/master-data/utils/response"
-	"github.com/gofiber/fiber/v2/log"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -45,7 +45,7 @@ func (r *repository) InsertPromotion(tx *sqlx.Tx, req CreatePromotionRequest, is
 		req.MaxDiscount, req.MinPurchase, req.StartAt, req.EndAt, isActive, req.CreatedBy,
 	).Scan(&id)
 	if err != nil {
-		log.Error("Failed to create promotion:", err)
+		slog.Error("Failed to create promotion", "error", err)
 		return 0, response.InternalServerError("Failed to create promotion", nil)
 	}
 	return id, nil
@@ -82,7 +82,7 @@ func (r *repository) GetPromotionByID(id int64) (*Promotion, error) {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, response.NotFound("Promotion not found", nil)
 		}
-		log.Error("Failed to get promotion:", err)
+		slog.Error("Failed to get promotion", "error", err)
 		return nil, response.InternalServerError("Failed to get promotion", err)
 	}
 	return &p, nil
@@ -96,7 +96,7 @@ func (r *repository) ListPromotions(params common.ParamsListRequest) (*response.
 
 	rows, err := r.db.NamedQuery(finalQuery, args)
 	if err != nil {
-		log.Error("Failed to execute list promotions query:", err)
+		slog.Error("Failed to execute list promotions query", "error", err)
 		return nil, response.InternalServerError("Failed to execute query", nil)
 	}
 	defer func(rows *sqlx.Rows) {
@@ -106,7 +106,7 @@ func (r *repository) ListPromotions(params common.ParamsListRequest) (*response.
 	for rows.Next() {
 		var p Promotion
 		if err := rows.StructScan(&p); err != nil {
-			log.Error("Failed to scan promotion:", err)
+			slog.Error("Failed to scan promotion", "error", err)
 			return nil, response.InternalServerError("Failed to scan promotion", nil)
 		}
 		record = append(record, p)
@@ -117,7 +117,7 @@ func (r *repository) ListPromotions(params common.ParamsListRequest) (*response.
 	countFinalQuery, countArgs := common.BuildCountQuery(countQuery, params, &mappingFieldType)
 	countStmt, err := r.db.PrepareNamed(countFinalQuery)
 	if err != nil {
-		log.Error("Failed to prepare promotion count query:", err)
+		slog.Error("Failed to prepare promotion count query", "error", err)
 		return nil, response.InternalServerError("Failed to prepare count query", nil)
 	}
 	defer func(countStmt *sqlx.NamedStmt) {
@@ -126,7 +126,7 @@ func (r *repository) ListPromotions(params common.ParamsListRequest) (*response.
 
 	err = countStmt.Get(&totalData, countArgs)
 	if err != nil {
-		log.Error("Failed to execute promotion count query:", err)
+		slog.Error("Failed to execute promotion count query", "error", err)
 		return nil, response.InternalServerError("Failed to get total data", nil)
 	}
 
@@ -166,7 +166,7 @@ func (r *repository) UpdatePromotion(tx *sqlx.Tx, req UpdatePromotionRequest) er
 		req.MaxDiscount, req.MinPurchase, req.StartAt, req.EndAt, req.UpdatedBy, req.ID,
 	)
 	if err != nil {
-		log.Error("Failed to update promotion:", err)
+		slog.Error("Failed to update promotion", "error", err)
 		return response.InternalServerError("Failed to update promotion", err)
 	}
 	rows, _ := res.RowsAffected()
@@ -186,7 +186,7 @@ func (r *repository) UpdatePromotionStatus(tx *sqlx.Tx, id int64, isActive bool)
 			if errors.Is(err, sql.ErrNoRows) {
 				return response.NotFound("Promotion not found", nil)
 			}
-			log.Error("Failed to check promotion expiration:", err)
+			slog.Error("Failed to check promotion expiration", "error", err)
 			return response.InternalServerError("Failed to check promotion expiration", nil)
 		}
 		if expired {
@@ -202,7 +202,7 @@ func (r *repository) UpdatePromotionStatus(tx *sqlx.Tx, id int64, isActive bool)
 	execer := r.getExecer(tx)
 	res, err := execer.Exec(query, isActive, id)
 	if err != nil {
-		log.Error("Failed to update promotion status:", err)
+		slog.Error("Failed to update promotion status", "error", err)
 		return response.InternalServerError("Failed to update promotion status", err)
 	}
 	rows, _ := res.RowsAffected()
@@ -221,7 +221,7 @@ func (r *repository) DeletePromotionByID(tx *sqlx.Tx, id int64) error {
 	execer := r.getExecer(tx)
 	res, err := execer.Exec(query, id)
 	if err != nil {
-		log.Error("Failed to delete promotion:", err)
+		slog.Error("Failed to delete promotion", "error", err)
 		return response.InternalServerError("Failed to delete promotion", err)
 	}
 	rows, _ := res.RowsAffected()
@@ -322,7 +322,7 @@ func (r *repository) CheckOverlappingPromotion(tx *sqlx.Tx, targetType string, t
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
 		}
-		log.Error("Failed to check overlapping promotion:", err)
+		slog.Error("Failed to check overlapping promotion", "error", err)
 		return nil, err
 	}
 	return &p, nil

@@ -1,6 +1,7 @@
 package promotion
 
 import (
+	"log/slog"
 	"strconv"
 
 	"eka-dev.cloud/master-data/lib"
@@ -8,7 +9,6 @@ import (
 	"eka-dev.cloud/master-data/utils/common"
 	"eka-dev.cloud/master-data/utils/response"
 	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/log"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -49,7 +49,7 @@ func NewHandler(app *fiber.App, db *sqlx.DB) Handler {
 func (h *handler) CreatePromotion(c *fiber.Ctx) error {
 	var req CreatePromotionRequest
 	if err := c.BodyParser(&req); err != nil {
-		log.Error("Error parsing request body: ", err)
+		slog.Error("Error parsing request body", "error", err)
 		return response.BadRequest("Invalid request body", nil)
 	}
 
@@ -112,7 +112,7 @@ func (h *handler) UpdatePromotion(c *fiber.Ctx) error {
 
 	var req UpdatePromotionRequest
 	if err := c.BodyParser(&req); err != nil {
-		log.Error("Error parsing request body: ", err)
+		slog.Error("Error parsing request body", "error", err)
 		return response.BadRequest("Invalid request body", nil)
 	}
 	req.ID = id
@@ -142,7 +142,7 @@ func (h *handler) UpdatePromotionStatus(c *fiber.Ctx) error {
 
 	var req UpdatePromotionStatusRequest
 	if err := c.BodyParser(&req); err != nil {
-		log.Error("Error parsing request body: ", err)
+		slog.Error("Error parsing request body", "error", err)
 		return response.BadRequest("Invalid request body", nil)
 	}
 
@@ -159,7 +159,7 @@ func (h *handler) ActivatePromotion(c *fiber.Ctx) error {
 		ID int64 `json:"id" validate:"required"`
 	}
 	if err := c.BodyParser(&req); err != nil {
-		log.Error("Failed to parse request body: ", err)
+		slog.Error("Failed to parse request body", "error", err)
 		return response.BadRequest("Invalid request body", nil)
 	}
 
@@ -180,7 +180,7 @@ func (h *handler) DeactivatePromotion(c *fiber.Ctx) error {
 		ID int64 `json:"id" validate:"required"`
 	}
 	if err := c.BodyParser(&req); err != nil {
-		log.Error("Failed to parse request body: ", err)
+		slog.Error("Failed to parse request body", "error", err)
 		return response.BadRequest("Invalid request body", nil)
 	}
 
