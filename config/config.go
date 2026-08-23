@@ -30,6 +30,7 @@ type appConfig struct {
 	RedisUsername     string
 	RedisPassword     string
 	ServiceMasterDataUrl string
+	ServiceAccountUrl string
 }
 
 var Config appConfig
@@ -67,8 +68,12 @@ func init() {
 		RedisUsername:        viper.GetString("REDIS_USERNAME"),
 		RedisPassword:        viper.GetString("REDIS_PASSWORD"),
 		ServiceMasterDataUrl: viper.GetString("SERVICE_MASTER_DATA_URL"),
+		ServiceAccountUrl:    viper.GetString("SERVICE_ACCOUNT_URL"),
 	}
 	if Config.ServiceMasterDataUrl == "" {
 		Config.ServiceMasterDataUrl = "http://localhost:8080"
+	}
+	if Config.ServiceAccountUrl == "" {
+		Config.ServiceAccountUrl = "http://localhost:8080"
 	}
 }

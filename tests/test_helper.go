@@ -6,12 +6,14 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -103,6 +105,23 @@ func SetupTestPostgres(t *testing.T) (*sqlx.DB, func()) {
 			SELECT setval(pg_get_serial_sequence('tm_promotions', 'id'), COALESCE((SELECT MAX(id) FROM tm_promotions), 1) + 1, false);
 		`)
 
+		// 2. Start Redis Testcontainer
+		redisContainer, rErr := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
+			ContainerRequest: testcontainers.ContainerRequest{
+				Image:        "redis:7-alpine",
+				ExposedPorts: []string{"6379/tcp"},
+				WaitingFor:   wait.ForLog("Ready to accept connections"),
+			},
+			Started: true,
+		})
+		if rErr == nil && redisContainer != nil {
+			endpoint, _ := redisContainer.Endpoint(ctx, "")
+			config.Config.RedisUrl = endpoint
+		}
+
+		lib.InitRedis()
+		primeStandardPermissions()
+
 		// Set package db.DB global pointer to real test DB
 		db.DB = dbConn
 		sharedDB = dbConn
@@ -110,6 +129,9 @@ func SetupTestPostgres(t *testing.T) (*sqlx.DB, func()) {
 		sharedTeardown = func() {
 			_ = dbConn.Close()
 			_ = postgresContainer.Terminate(ctx)
+			if redisContainer != nil {
+				_ = redisContainer.Terminate(ctx)
+			}
 		}
 	})
 
@@ -118,6 +140,49 @@ func SetupTestPostgres(t *testing.T) (*sqlx.DB, func()) {
 	}
 
 	return sharedDB, func() {}
+}
+
+func primeStandardPermissions() {
+	if lib.RedisClient == nil {
+		return
+	}
+	ctx := context.Background()
+
+	// Admin (role 1)
+	adminPerms := map[string]common.PermissionAction{
+		"catalog":   {View: true, Create: true, Edit: true, Delete: true},
+		"category":  {View: true, Create: true, Edit: true, Delete: true},
+		"table":     {View: true, Create: true, Edit: true, Delete: true},
+		"voucher":   {View: true, Create: true, Edit: true, Delete: true},
+		"promotion": {View: true, Create: true, Edit: true, Delete: true},
+		"barista":   {View: true, Create: true, Edit: true, Delete: true},
+		"order":     {View: true, Create: true, Edit: true, Delete: true},
+		"inventory": {View: true, Create: true, Edit: true, Delete: true},
+		"report":    {View: true, Create: true, Edit: true, Delete: true},
+	}
+	adminBytes, _ := json.Marshal(adminPerms)
+	lib.RedisClient.Set(ctx, "auth:role_permissions:1", string(adminBytes), 24*time.Hour)
+
+	// User / Customer (role 2)
+	userPerms := map[string]common.PermissionAction{
+		"catalog":   {View: true},
+		"category":  {View: true},
+		"table":     {View: true},
+		"voucher":   {View: true},
+		"promotion": {View: true},
+	}
+	userBytes, _ := json.Marshal(userPerms)
+	lib.RedisClient.Set(ctx, "auth:role_permissions:2", string(userBytes), 24*time.Hour)
+
+	// Barista (role 3)
+	baristaPerms := map[string]common.PermissionAction{
+		"catalog":   {View: true},
+		"order":     {View: true, Edit: true},
+		"inventory": {View: true, Edit: true},
+		"report":    {View: true},
+	}
+	baristaBytes, _ := json.Marshal(baristaPerms)
+	lib.RedisClient.Set(ctx, "auth:role_permissions:3", string(baristaBytes), 24*time.Hour)
 }
 
 func SetupTestMinio(t *testing.T) (*minioClient.Client, func()) {
@@ -206,12 +271,45 @@ func GenerateTestToken(userId int64, email, role string) string {
 		secret = "super-secret-jwt-key"
 		config.Config.SecretJwt = secret
 	}
+
+	roleId := 2
+	if strings.EqualFold(role, "admin") {
+		roleId = 1
+	} else if strings.EqualFold(role, "barista") {
+		roleId = 3
+	}
+
+	perms := make(map[string]common.PermissionAction)
+	if roleId == 1 {
+		features := []string{"catalog", "category", "table", "voucher", "promotion", "barista", "order", "inventory", "report", "role_management"}
+		for _, f := range features {
+			perms[f] = common.PermissionAction{View: true, Create: true, Edit: true, Delete: true}
+		}
+	} else if roleId == 3 {
+		perms["catalog"] = common.PermissionAction{View: true}
+		perms["order"] = common.PermissionAction{View: true, Edit: true}
+		perms["inventory"] = common.PermissionAction{View: true, Edit: true}
+		perms["report"] = common.PermissionAction{View: true}
+	} else {
+		perms["catalog"] = common.PermissionAction{View: true}
+		perms["category"] = common.PermissionAction{View: true}
+		perms["table"] = common.PermissionAction{View: true}
+		perms["promotion"] = common.PermissionAction{View: true}
+		perms["voucher"] = common.PermissionAction{View: true}
+	}
+
+	if lib.RedisClient != nil && len(perms) > 0 {
+		permBytes, _ := json.Marshal(perms)
+		lib.RedisClient.Set(context.Background(), fmt.Sprintf("auth:role_permissions:%d", roleId), string(permBytes), 24*time.Hour)
+	}
+
 	claims := common.Claims{
 		FullName: "Test User",
 		Email:    email,
 		UserId:   userId,
 		Type:     "ACCESS",
 		Role:     role,
+		RoleId:   roleId,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),

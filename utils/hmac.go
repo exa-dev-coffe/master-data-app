@@ -22,21 +22,25 @@ func GenerateHMAC(data interface{}) (string, error) {
 	return string(h.Sum(nil)), nil
 }
 
-// VerifySignature memeriksa apakah signature valid
+func CreateSignature(queryString, bodyString, timestamp string) (string, error) {
+	message := queryString + timestamp + bodyString
+	mac := hmac.New(sha256.New, []byte(config.Config.Secret))
+	mac.Write([]byte(message))
+	return base64.StdEncoding.EncodeToString(mac.Sum(nil)), nil
+}
+
+// VerifySignature checks if signature is valid
 func VerifySignature(message string, signatureHeader string) error {
-	// Decode base64 dari header
 	signatureBytes, err := base64.StdEncoding.DecodeString(signatureHeader)
 	if err != nil {
 		slog.Error("Failed to decode signature", "error", err)
 		return response.InternalServerError("failed to decode signature", nil)
 	}
 
-	// Buat ulang signature dari body/message
 	mac := hmac.New(sha256.New, []byte(config.Config.Secret))
 	mac.Write([]byte(message))
 	expectedMAC := mac.Sum(nil)
 
-	// Bandingkan dengan waktu konstan (aman dari timing attack)
 	if !hmac.Equal(signatureBytes, expectedMAC) {
 		return response.Unauthorized("invalid signature", nil)
 	}

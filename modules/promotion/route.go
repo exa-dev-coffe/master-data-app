@@ -38,10 +38,10 @@ func NewHandler(app *fiber.App, db *sqlx.DB) Handler {
 	routes := app.Group("/api/1.0/promotions")
 	routes.Get("", h.ListPromotions)
 	routes.Get("/:id", h.GetPromotionByID)
-	routes.Post("", middleware.RequireRole("admin"), h.CreatePromotion)
-	routes.Put("/:id", middleware.RequireRole("admin"), h.UpdatePromotion)
-	routes.Patch("/:id/status", middleware.RequireRole("admin"), h.UpdatePromotionStatus)
-	routes.Delete("/:id", middleware.RequireRole("admin"), h.DeletePromotion)
+	routes.Post("", middleware.RequirePermission("promotion", "create"), h.CreatePromotion)
+	routes.Put("/:id", middleware.RequirePermission("promotion", "edit"), h.UpdatePromotion)
+	routes.Patch("/:id/status", middleware.RequirePermission("promotion", "edit"), h.UpdatePromotionStatus)
+	routes.Delete("/:id", middleware.RequirePermission("promotion", "delete"), h.DeletePromotion)
 
 	return h
 }

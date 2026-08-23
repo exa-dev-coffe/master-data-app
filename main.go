@@ -48,10 +48,14 @@ func main() {
 func initiator() {
 	// Initialize Asynq Client for background task scheduling
 	lib.InitAsynq()
+	// Initialize Redis Client for token and permission caching
+	lib.InitRedis()
 
 	// Initialize the fiber app
 	fiberApp := fiber.New(fiber.Config{
-		ErrorHandler: middleware.ErrorHandler,
+		ErrorHandler:    middleware.ErrorHandler,
+		ReadBufferSize:  16 * 1024,
+		WriteBufferSize: 16 * 1024,
 	})
 
 	fiberApp.Use(requestid.New())

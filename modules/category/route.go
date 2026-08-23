@@ -31,8 +31,8 @@ func NewHandler(app *fiber.App, db *sqlx.DB) Handler {
 	// mapping routes
 	routes := app.Group("/api/1.0/categories")
 	routes.Get("", handler.GetCategories)
-	routes.Post("", middleware.RequireRole("admin"), handler.CreateCategory)
-	routes.Delete("", middleware.RequireRole("admin"), handler.DeleteCategory)
+	routes.Post("", middleware.RequirePermission("category", "create"), handler.CreateCategory)
+	routes.Delete("", middleware.RequirePermission("category", "delete"), handler.DeleteCategory)
 
 	return handler
 }
