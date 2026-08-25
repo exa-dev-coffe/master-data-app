@@ -21,9 +21,11 @@ func NewInternalService(sm menu.Service, st table.Service) Service {
 }
 
 func (s *internalService) GetAvailableMenusAndValidateTable(ids []int, tableId int64) ([]menu.InternalAvailableMenuResponse, error) {
-	err := s.st.ValidateTable(tableId)
-	if err != nil {
-		return nil, err
+	if tableId > 0 {
+		err := s.st.ValidateTable(tableId)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	menus, err := s.sm.GetAvailableMenusByIds(ids)
@@ -40,10 +42,20 @@ func (s *internalService) GetListMenusByIdsAndTablesByIds(ids []int, tableIds []
 		return GetMenusAndTablesResponse{}, err
 	}
 
-	tables, err := s.st.GetTablesByIds(tableIds)
+	// Filter valid positive table IDs
+	validTableIds := make([]int, 0)
+	for _, id := range tableIds {
+		if id > 0 {
+			validTableIds = append(validTableIds, id)
+		}
+	}
 
-	if err != nil {
-		return GetMenusAndTablesResponse{}, err
+	tables := make([]table.InternalTableResponse, 0)
+	if len(validTableIds) > 0 {
+		t, err := s.st.GetTablesByIds(validTableIds)
+		if err == nil && t != nil {
+			tables = t
+		}
 	}
 
 	return GetMenusAndTablesResponse{

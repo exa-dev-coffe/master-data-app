@@ -8,7 +8,7 @@ import (
 // TODO: define DTOs here
 type GetMenusAvailableAndValidateTableRequest struct {
 	Ids     string `query:"ids" validate:"required"`
-	TableId int64  `query:"tableId" validate:"required"`
+	TableId int64  `query:"tableId"`
 }
 type GetMenusAndTableRequest struct {
 	Ids      string `query:"ids" validate:"required"`
