@@ -1,12 +1,13 @@
 package upload
 
 import (
+	"log/slog"
+
 	"eka-dev.cloud/master-data/lib"
 	"eka-dev.cloud/master-data/middleware"
 	"eka-dev.cloud/master-data/utils/common"
 	"eka-dev.cloud/master-data/utils/response"
 	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/log"
 )
 
 type Handler interface {
@@ -25,8 +26,8 @@ func NewHandler(app *fiber.App) Handler {
 
 	// mapping routes
 	routes := app.Group("/api/1.0/upload")
-	routes.Post("/upload-menu", middleware.RequireRole("admin"), handler.UploadMenuFoto)
-	routes.Delete("/delete-menu", middleware.RequireRole("admin"), handler.DeleteMenuFoto)
+	routes.Post("/upload-menu", middleware.RequirePermission("catalog", "create"), handler.UploadMenuFoto)
+	routes.Delete("/delete-menu", middleware.RequirePermission("catalog", "delete"), handler.DeleteMenuFoto)
 
 	return handler
 }
@@ -35,7 +36,7 @@ func (s *handler) UploadMenuFoto(c *fiber.Ctx) error {
 	// Parse the multipart form:
 	form, err := c.MultipartForm()
 	if err != nil {
-		log.Error("Error parsing multipart form: ", err)
+		slog.Error("Error parsing multipart form", "error", err)
 		return response.BadRequest("Failed to parse multipart form", nil)
 	}
 
@@ -64,7 +65,7 @@ func (s *handler) DeleteMenuFoto(c *fiber.Ctx) error {
 	var request common.DeleteImageRequest
 	err := c.QueryParser(&request)
 	if err != nil {
-		log.Error("Error parsing request: ", err)
+		slog.Error("Error parsing request", "error", err)
 		return response.BadRequest("Invalid query parameters", nil)
 	}
 

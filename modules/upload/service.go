@@ -2,6 +2,7 @@ package upload
 
 import (
 	"fmt"
+	"log/slog"
 	"mime/multipart"
 	"path/filepath"
 	"strings"
@@ -9,7 +10,6 @@ import (
 
 	"eka-dev.cloud/master-data/lib"
 	"eka-dev.cloud/master-data/utils/response"
-	"github.com/gofiber/fiber/v2/log"
 	"github.com/google/uuid"
 )
 
@@ -29,7 +29,7 @@ func generateFileName(original string) (string, error) {
 	extension := filepath.Ext(original) // ambil ekstensi asli (.jpg, .png)
 	u, err := uuid.NewRandom()
 	if err != nil {
-		log.Error("Failed to generate UUID for file name:", err)
+		slog.Error("Failed to generate UUID for file name", "error", err)
 		return "", response.InternalServerError("Failed to generate file name", nil)
 	}
 

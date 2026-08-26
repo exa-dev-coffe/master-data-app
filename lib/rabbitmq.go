@@ -3,12 +3,12 @@ package lib
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"sync"
 	"time"
 
 	"eka-dev.cloud/master-data/config"
 	"eka-dev.cloud/master-data/utils/response"
-	"github.com/gofiber/fiber/v2/log"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -64,16 +64,16 @@ func GetConnection() *amqp.Connection {
 		return conn
 	}
 
-	// retry loop kalau gagal
+	// retry loop if failed
 	for {
 		c, err := amqp.Dial(config.Config.RabbitmqUrl)
 		if err != nil {
-			log.Error("❌ Failed to connect to RabbitMQ, retrying in 5s:", err)
+			slog.Error("Failed to connect to RabbitMQ, retrying in 5s", "error", err)
 			time.Sleep(5 * time.Second)
 			continue
 		}
 		conn = c
-		log.Info("✅ Connected to RabbitMQ")
+		slog.Info("Connected to RabbitMQ")
 		break
 	}
 
@@ -111,7 +111,7 @@ func SendMessage(
 			false, // noWait
 			nil,   // args
 		); err != nil {
-			log.Error("Failed to declare exchange:", err)
+			slog.Error("Failed to declare exchange", "error", err)
 			return response.InternalServerError("Failed to declare exchange", nil)
 		}
 	}
@@ -126,7 +126,7 @@ func SendMessage(
 			false,
 			props,
 		); err != nil {
-			log.Error("Failed to publish message:", err)
+			slog.Error("Failed to publish message", "error", err)
 			return response.InternalServerError("Failed to publish message", nil)
 		}
 
@@ -140,7 +140,7 @@ func SendMessage(
 			false,   // noWait
 			headers, // args
 		); err != nil {
-			log.Error("Failed to declare queue:", err)
+			slog.Error("Failed to declare queue", "error", err)
 			return response.InternalServerError("Failed to declare queue", nil)
 		}
 
@@ -153,7 +153,7 @@ func SendMessage(
 				false,
 				nil,
 			); err != nil {
-				log.Error("Failed to bind queue:", err)
+				slog.Error("Failed to bind queue", "error", err)
 				return response.InternalServerError("Failed to bind queue", nil)
 			}
 		}
@@ -183,18 +183,17 @@ func SendMessage(
 		); err != nil {
 			span.RecordError(err)
 			span.SetStatus(codes.Error, err.Error())
-			log.Error("Failed to publish message:", err)
+			slog.Error("Failed to publish message", "error", err)
 			return response.InternalServerError("Failed to publish message", nil)
 		}
 		span.SetStatus(codes.Ok, "")
 
 	default:
-		log.Errorf("[!] Unsupported exchange type: %v\n", exchangeType)
+		slog.Error("Unsupported exchange type", "exchange_type", exchangeType)
 		return nil
 	}
 
-	log.Infof("[x] Sent '%s' to exchange='%s', queue='%s', routingKey='%s', type='%s'\n",
-		message, exchange, queueName, routingKey, exchangeType)
+	slog.Info("Sent message", "exchange", exchange, "queue", queueName, "routing_key", routingKey, "type", exchangeType)
 
 	return nil
 }
@@ -217,106 +216,128 @@ func ListenQueue(
 	consumeArgs amqp.Table, // ← buat Consume
 ) error {
 
-	if exchange != "" {
-		// 1️⃣ Declare exchange
-		if err := ch.ExchangeDeclare(
-			exchange,
-			string(exchangeType),
-			durable,
-			autoDelete,
-			false,
-			noWait,
-			nil,
-		); err != nil {
-			return err
-		}
-	}
-
-	// 2️⃣ Declare queue
-	q, err := ch.QueueDeclare(
-		queueName,
-		durable,
-		autoDelete,
-		exclusive,
-		noWait,
-		nil,
-	)
-	if err != nil {
-		return err
-	}
-
-	if exchange != "" {
-		// 3️⃣ Bind ke exchange (pakai bindHeaders)
-		if err := ch.QueueBind(
-			q.Name,
-			routingKey,
-			exchange,
-			noWait,
-			bindHeaders,
-		); err != nil {
-			return err
-		}
-	}
-
-	// 4️⃣ Consume (pakai consumeArgs)
-	msgs, err := ch.Consume(
-		q.Name,
-		consumerName,
-		autoAck,
-		exclusive,
-		noLocal,
-		noWait,
-		consumeArgs,
-	)
-	if err != nil {
-		return err
-	}
-
-	log.Infof("[*] Listening queue '%s' (exchange='%s', routingKey='%s', consumer=%s)...",
-		q.Name, exchange, routingKey, consumerName)
+	slog.Info("Initializing resilient queue listener", "queue", queueName, "exchange", exchange, "routing_key", routingKey, "consumer", consumerName)
 
 	go func() {
 		tracer := otel.GetTracerProvider().Tracer("rabbitmq-client")
 		propagator := otel.GetTextMapPropagator()
 
-		for msg := range msgs {
-			var carrier AmqpHeaderCarrier
-			if msg.Headers != nil {
-				carrier = AmqpHeaderCarrier(msg.Headers)
-			} else {
-				carrier = make(AmqpHeaderCarrier)
+		for {
+			activeCh, err := GetChannel()
+			if err != nil {
+				slog.Error("Failed to get channel for queue listener, retrying in 5s", "queue", queueName, "error", err)
+				time.Sleep(5 * time.Second)
+				continue
 			}
-			ctx := propagator.Extract(context.Background(), carrier)
 
-			_, span := tracer.Start(ctx, fmt.Sprintf("rabbitmq.consume %s", queueName),
-				trace.WithSpanKind(trace.SpanKindConsumer),
-				trace.WithAttributes(
-					attribute.String("messaging.system", "rabbitmq"),
-					attribute.String("messaging.source", queueName),
-					attribute.String("messaging.operation", "receive"),
-				),
+			if exchange != "" {
+				if err := activeCh.ExchangeDeclare(
+					exchange,
+					string(exchangeType),
+					durable,
+					autoDelete,
+					false,
+					noWait,
+					nil,
+				); err != nil {
+					slog.Error("Failed to declare exchange for listener, retrying in 5s", "exchange", exchange, "error", err)
+					_ = activeCh.Close()
+					time.Sleep(5 * time.Second)
+					continue
+				}
+			}
+
+			q, err := activeCh.QueueDeclare(
+				queueName,
+				durable,
+				autoDelete,
+				exclusive,
+				noWait,
+				nil,
 			)
+			if err != nil {
+				slog.Error("Failed to declare queue for listener, retrying in 5s", "queue", queueName, "error", err)
+				_ = activeCh.Close()
+				time.Sleep(5 * time.Second)
+				continue
+			}
 
-			if err := handler(msg); err != nil {
-				span.RecordError(err)
-				span.SetStatus(codes.Error, err.Error())
-				log.Errorf("[!] Handler error: %v", err)
-				if !autoAck {
-					err = msg.Nack(false, true)
-					if err != nil {
-						log.Errorf("[!] Nack error: %v", err)
-					}
-				}
-			} else {
-				span.SetStatus(codes.Ok, "")
-				if !autoAck {
-					err = msg.Ack(false)
-					if err != nil {
-						log.Errorf("[!] Ack error: %v", err)
-					}
+			if exchange != "" {
+				if err := activeCh.QueueBind(
+					q.Name,
+					routingKey,
+					exchange,
+					noWait,
+					bindHeaders,
+				); err != nil {
+					slog.Error("Failed to bind queue for listener, retrying in 5s", "queue", queueName, "error", err)
+					_ = activeCh.Close()
+					time.Sleep(5 * time.Second)
+					continue
 				}
 			}
-			span.End()
+
+			msgs, err := activeCh.Consume(
+				q.Name,
+				consumerName,
+				autoAck,
+				exclusive,
+				noLocal,
+				noWait,
+				consumeArgs,
+			)
+			if err != nil {
+				slog.Error("Failed to start consume, retrying in 5s", "queue", queueName, "error", err)
+				_ = activeCh.Close()
+				time.Sleep(5 * time.Second)
+				continue
+			}
+
+			slog.Info("Successfully attached and listening to queue loop", "queue", q.Name, "consumer", consumerName)
+
+			for msg := range msgs {
+				var carrier AmqpHeaderCarrier
+				if msg.Headers != nil {
+					carrier = AmqpHeaderCarrier(msg.Headers)
+				} else {
+					carrier = make(AmqpHeaderCarrier)
+				}
+				ctx := propagator.Extract(context.Background(), carrier)
+
+				_, span := tracer.Start(ctx, fmt.Sprintf("rabbitmq.consume %s", queueName),
+					trace.WithSpanKind(trace.SpanKindConsumer),
+					trace.WithAttributes(
+						attribute.String("messaging.system", "rabbitmq"),
+						attribute.String("messaging.source", queueName),
+						attribute.String("messaging.operation", "receive"),
+					),
+				)
+
+				if err := handler(msg); err != nil {
+					span.RecordError(err)
+					span.SetStatus(codes.Error, err.Error())
+					slog.Error("Handler error", "error", err)
+					if !autoAck {
+						err = msg.Nack(false, true)
+						if err != nil {
+							slog.Error("Nack error", "error", err)
+						}
+					}
+				} else {
+					span.SetStatus(codes.Ok, "")
+					if !autoAck {
+						err = msg.Ack(false)
+						if err != nil {
+							slog.Error("Ack error", "error", err)
+						}
+					}
+				}
+				span.End()
+			}
+
+			slog.Warn("RabbitMQ consumer channel disconnected or closed. Re-attaching listener in 3s...", "queue", queueName)
+			_ = activeCh.Close()
+			time.Sleep(3 * time.Second)
 		}
 	}()
 

@@ -2,7 +2,8 @@ package main
 
 import (
 	"context"
-	"log"
+	"log/slog"
+	"os"
 
 	"eka-dev.cloud/master-data/config"
 	"eka-dev.cloud/master-data/db"
@@ -13,6 +14,7 @@ import (
 	"eka-dev.cloud/master-data/modules/category"
 	"eka-dev.cloud/master-data/modules/internalModule"
 	"eka-dev.cloud/master-data/modules/menu"
+	"eka-dev.cloud/master-data/modules/promotion"
 	"eka-dev.cloud/master-data/modules/table"
 	"eka-dev.cloud/master-data/modules/upload"
 	"eka-dev.cloud/master-data/utils/response"
@@ -37,16 +39,23 @@ func main() {
 	defer func(db *sqlx.DB) {
 		err := db.Close()
 		if err != nil {
-			log.Println("Error closing database connection:", err)
+			slog.Error("Error closing database connection", "error", err)
 		}
 	}(db.DB)
 
 }
 
 func initiator() {
+	// Initialize Asynq Client for background task scheduling
+	lib.InitAsynq()
+	// Initialize Redis Client for token and permission caching
+	lib.InitRedis()
+
 	// Initialize the fiber app
 	fiberApp := fiber.New(fiber.Config{
-		ErrorHandler: middleware.ErrorHandler,
+		ErrorHandler:    middleware.ErrorHandler,
+		ReadBufferSize:  16 * 1024,
+		WriteBufferSize: 16 * 1024,
 	})
 
 	fiberApp.Use(requestid.New())
@@ -56,12 +65,12 @@ func initiator() {
 	fiberApp.Get("/health", func(c *fiber.Ctx) error {
 		err := db.DB.Ping()
 		if err != nil {
-			log.Println("Database ping failed:", err)
+			slog.Error("Database ping failed", "error", err)
 			return c.Status(fiber.StatusInternalServerError).JSON(response.InternalServerError("Database connection error", nil))
 		}
 		err = lib.HealthCheck()
 		if err != nil {
-			log.Println("RabbitMQ connection failed:", err)
+			slog.Error("RabbitMQ connection failed", "error", err)
 			return c.Status(fiber.StatusInternalServerError).JSON(response.InternalServerError("RabbitMQ connection error", nil))
 		}
 		return c.Status(fiber.StatusOK).JSON(response.Success("OK", nil))
@@ -75,14 +84,14 @@ func initiator() {
 
 	ch, err := lib.GetChannel()
 	if err != nil {
-		log.Fatalln("Failed to connect to RabbitMQ:", err)
-		return
+		slog.Error("Failed to connect to RabbitMQ", "error", err)
+		os.Exit(1)
 	}
 
 	defer func(ch *amqp.Channel) {
 		err := ch.Close()
 		if err != nil {
-			log.Println("Error closing RabbitMQ channel:", err)
+			slog.Error("Error closing RabbitMQ channel", "error", err)
 		}
 	}(ch)
 
@@ -101,6 +110,8 @@ func initiator() {
 	table.NewHandler(fiberApp, db.DB)
 	// Internal
 	internalModule.NewHandler(fiberApp, db.DB)
+	// Promotions
+	promotion.NewHandler(fiberApp, db.DB)
 
 	fiberApp.All("*", func(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusNotFound).JSON(response.NotFound("Route not found", nil))
@@ -109,7 +120,7 @@ func initiator() {
 	err = fiberApp.Listen(config.Config.Port)
 
 	if err != nil {
-		log.Fatalln("Failed to start server:", err)
-		return
+		slog.Error("Failed to start server", "error", err)
+		os.Exit(1)
 	}
 }

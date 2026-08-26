@@ -2,11 +2,11 @@ package lib
 
 import (
 	"context"
+	"log/slog"
 	"mime/multipart"
 
 	"eka-dev.cloud/master-data/config"
 	"eka-dev.cloud/master-data/utils/response"
-	"github.com/gofiber/fiber/v2/log"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 )
@@ -14,11 +14,16 @@ import (
 var minioClient *minio.Client
 
 func init() {
-	log.Info("Lib initialized minio")
+	slog.Info("Minio Init")
 	endpoint := config.Config.MinioEndpoint
 	accessKey := config.Config.MinioAccessKey
 	secretKey := config.Config.MinioSecretKey
 	useSSL := config.Config.MinioUseSSL
+
+	if endpoint == "" {
+		slog.Warn("MinIO endpoint is empty, skipping client initialization")
+		return
+	}
 
 	// Initialize minio client object.
 	minioGenerateClient, err := minio.New(endpoint, &minio.Options{
@@ -27,20 +32,28 @@ func init() {
 	})
 
 	if err != nil {
-		log.Fatal("Failed to initialize MinIO client:", err)
+		slog.Error("Failed to initialize MinIO client", "error", err)
+		return
 	}
 	minioClient = minioGenerateClient
 
-	log.Info("MinIO client initialized successfully")
+	slog.Info("MinIO client initialized successfully")
+}
+
+func SetMinioClient(client *minio.Client) {
+	minioClient = client
 }
 
 func UploadFile(filePath string, fileHeader *multipart.FileHeader) (string, error) {
+	if minioClient == nil {
+		return "", response.InternalServerError("MinIO client uninitialized", nil)
+	}
 	bucketName := config.Config.MinioBucketName
 	ctx := context.Background()
 
 	file, err := fileHeader.Open()
 	if err != nil {
-		log.Error("Failed to open file:", err)
+		slog.Error("Failed to open file", "error", err)
 		return "", response.InternalServerError("Failed to open file", nil)
 	}
 
@@ -48,7 +61,7 @@ func UploadFile(filePath string, fileHeader *multipart.FileHeader) (string, erro
 		ContentType: fileHeader.Header.Get("Content-Type"),
 	})
 	if err != nil {
-		log.Error("Failed to upload file to MinIO:", err)
+		slog.Error("Failed to upload file to MinIO", "error", err)
 		return "", response.InternalServerError("Failed to upload file", nil)
 	}
 
@@ -57,13 +70,16 @@ func UploadFile(filePath string, fileHeader *multipart.FileHeader) (string, erro
 }
 
 func DeleteFile(filePath string) error {
+	if minioClient == nil {
+		return response.InternalServerError("MinIO client uninitialized", nil)
+	}
 	bucketName := config.Config.MinioBucketName
 
 	ctx := context.Background()
 
 	err := minioClient.RemoveObject(ctx, bucketName, filePath, minio.RemoveObjectOptions{})
 	if err != nil {
-		log.Error("Failed to delete file from MinIO:", err)
+		slog.Error("Failed to delete file from MinIO", "error", err)
 		return response.InternalServerError("Failed to delete file", nil)
 	}
 

@@ -1,12 +1,13 @@
 package table
 
 import (
+	"log/slog"
+
 	"eka-dev.cloud/master-data/lib"
 	"eka-dev.cloud/master-data/middleware"
 	"eka-dev.cloud/master-data/utils/common"
 	"eka-dev.cloud/master-data/utils/response"
 	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/log"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -28,10 +29,10 @@ func NewHandler(app *fiber.App, db *sqlx.DB) Handler {
 	handler := &handler{service: service, db: db}
 
 	routes := app.Group("/api/1.0/tables")
-	routes.Get("", middleware.RequireAuth, handler.GetTables)
-	routes.Post("", middleware.RequireRole("admin"), handler.CreateTable)
-	routes.Put("", middleware.RequireRole("admin"), handler.UpdateTable)
-	routes.Delete("", middleware.RequireRole("admin"), handler.DeleteTable)
+	routes.Get("", handler.GetTables)
+	routes.Post("", middleware.RequirePermission("table", "create"), handler.CreateTable)
+	routes.Put("", middleware.RequirePermission("table", "edit"), handler.UpdateTable)
+	routes.Delete("", middleware.RequirePermission("table", "delete"), handler.DeleteTable)
 
 	return handler
 }
@@ -87,7 +88,7 @@ func (h *handler) UpdateTable(c *fiber.Ctx) error {
 	var request UpdateTableRequest
 	err := c.BodyParser(&request)
 	if err != nil {
-		log.Error("Error parsing request body:", err)
+		slog.Error("Error parsing request body", "error", err)
 		return response.BadRequest("Invalid request body", nil)
 	}
 	err = lib.ValidateRequest(request)

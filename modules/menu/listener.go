@@ -2,12 +2,12 @@ package menu
 
 import (
 	"encoding/json"
+	"log/slog"
 
 	"eka-dev.cloud/master-data/lib"
 	"eka-dev.cloud/master-data/modules/upload"
 	"eka-dev.cloud/master-data/utils/common"
 	"eka-dev.cloud/master-data/utils/response"
-	"github.com/gofiber/fiber/v2/log"
 	"github.com/jmoiron/sqlx"
 	amqp "github.com/rabbitmq/amqp091-go"
 )
@@ -29,7 +29,7 @@ func NewListener(ch *amqp.Channel, db *sqlx.DB) Listener {
 	l := &menuListener{service: service, db: db, ch: ch}
 
 	if err := l.ListenSetRatingMenu(); err != nil {
-		log.Fatalf("Failed to start listening to menu.set_rating queue: %v", err)
+		slog.Error("Failed to start listening to menu.set_rating queue", "error", err)
 	}
 
 	return l
@@ -37,7 +37,7 @@ func NewListener(ch *amqp.Channel, db *sqlx.DB) Listener {
 }
 
 func (l *menuListener) ListenSetRatingMenu() error {
-	log.Info("Starting to listen to menu.set_rating queue")
+	slog.Info("Starting to listen to menu.set_rating queue")
 	return lib.ListenQueue(
 		l.ch,
 		"menu.set_rating",
@@ -45,10 +45,10 @@ func (l *menuListener) ListenSetRatingMenu() error {
 		"menu.set_rating",
 		lib.ExchangeDirect,
 		func(delivery amqp.Delivery) error {
-			log.Info("Received message: ", string(delivery.Body))
+			slog.Info("Received message", "body", string(delivery.Body))
 			var req UpdateRatingAndReviewCountRequest
 			if err := json.Unmarshal(delivery.Body, &req); err != nil {
-				log.Errorf("Failed to parse message body: %v", err)
+				slog.Error("Failed to parse message body", "error", err)
 				return response.InternalServerError("Failed to parse message body", nil)
 			}
 
@@ -59,7 +59,7 @@ func (l *menuListener) ListenSetRatingMenu() error {
 			err := common.WithTransaction[UpdateRatingAndReviewCountRequest](l.db, l.service.UpdateRatingAndReviewCount, req)
 
 			if err != nil {
-				log.Errorf("Failed to update menu rating and review count: %v", err)
+				slog.Error("Failed to update menu rating and review count", "error", err)
 				return response.InternalServerError("Failed to update menu rating and review count", nil)
 			}
 

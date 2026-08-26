@@ -1,13 +1,14 @@
 package menu
 
 import (
+	"log/slog"
+
 	"eka-dev.cloud/master-data/lib"
 	"eka-dev.cloud/master-data/middleware"
 	"eka-dev.cloud/master-data/modules/upload"
 	"eka-dev.cloud/master-data/utils/common"
 	"eka-dev.cloud/master-data/utils/response"
 	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/log"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -37,14 +38,24 @@ func NewHandler(app *fiber.App, db *sqlx.DB) Handler {
 	// mapping routes
 	routes := app.Group("/api/1.0/menus")
 	routes.Get("", handler.GetMenus)
-	routes.Post("", middleware.RequireRole("admin"), handler.CreateMenu)
-	routes.Put("", middleware.RequireRole("admin"), handler.UpdateMenu)
-	routes.Delete("", middleware.RequireRole("admin"), handler.DeleteMenu)
+	routes.Post("", middleware.RequirePermission("catalog", "create"), handler.CreateMenu)
+	routes.Put("", middleware.RequirePermission("catalog", "edit"), handler.UpdateMenu)
+	routes.Delete("", middleware.RequirePermission("catalog", "delete"), handler.DeleteMenu)
 	routes.Get("/detail", handler.GetOneMenu)
-	routes.Get("/uncategorized", middleware.RequireRole("admin"), handler.GetMenusUncategorized)
-	routes.Patch("/set-category", middleware.RequireRole("admin"), handler.SetMenuCategory)
+	routes.Get("/uncategorized", middleware.RequireAnyPermission(
+		middleware.FeatureAction{Feature: "catalog", Action: "view"},
+		middleware.FeatureAction{Feature: "category", Action: "view"},
+		middleware.FeatureAction{Feature: "category", Action: "edit"},
+	), handler.GetMenusUncategorized)
+	routes.Patch("/set-category", middleware.RequireAnyPermission(
+		middleware.FeatureAction{Feature: "catalog", Action: "edit"},
+		middleware.FeatureAction{Feature: "category", Action: "edit"},
+	), handler.SetMenuCategory)
 	routes.Get("/by-category", handler.GetMenusByCategoryID)
-	routes.Patch("/availability", middleware.RequireRole("admin", "barista"), handler.UpdateMenuAvailability)
+	routes.Patch("/availability", middleware.RequireAnyPermission(
+		middleware.FeatureAction{Feature: "inventory", Action: "edit"},
+		middleware.FeatureAction{Feature: "catalog", Action: "edit"},
+	), handler.UpdateMenuAvailability)
 	return handler
 }
 
@@ -80,7 +91,7 @@ func (h *handler) CreateMenu(c *fiber.Ctx) error {
 	var request CreateMenuRequest
 	err := c.BodyParser(&request)
 	if err != nil {
-		log.Error("Error parsing request body: ", err)
+		slog.Error("Error parsing request body", "error", err)
 		return response.BadRequest("Invalid request body", err)
 	}
 
@@ -109,7 +120,7 @@ func (h *handler) UpdateMenu(c *fiber.Ctx) error {
 
 	err := c.BodyParser(&request)
 	if err != nil {
-		log.Error("Error parsing request body:", err)
+		slog.Error("Error parsing request body", "error", err)
 		return response.BadRequest("Invalid request body", nil)
 	}
 
@@ -201,7 +212,7 @@ func (h *handler) SetMenuCategory(c *fiber.Ctx) error {
 	var request SetMenuCategoryRequest
 	err := c.BodyParser(&request)
 	if err != nil {
-		log.Error("Error parsing request body: ", err)
+		slog.Error("Error parsing request body", "error", err)
 		return response.BadRequest("Invalid request body", err)
 	}
 
@@ -243,7 +254,7 @@ func (h *handler) UpdateMenuAvailability(c *fiber.Ctx) error {
 	var request UpdateMenuAvailabilityRequest
 	err := c.BodyParser(&request)
 	if err != nil {
-		log.Error("Error parsing request body: ", err)
+		slog.Error("Error parsing request body", "error", err)
 		return response.BadRequest("Invalid request body", err)
 	}
 

@@ -1,16 +1,17 @@
 package category
 
 import (
+	"log/slog"
+
 	"eka-dev.cloud/master-data/utils/common"
 	"eka-dev.cloud/master-data/utils/response"
-	"github.com/gofiber/fiber/v2/log"
 	"github.com/jmoiron/sqlx"
 )
 
 type Repository interface {
 	GetListCategoriesPagination(params common.ParamsListRequest) (*response.Pagination[[]Category], error)
 	GetListCategoriesNoPagination(params common.ParamsListRequest) ([]Category, error)
-	InsertCategory(tx *sqlx.Tx, model CreateCategoryRequest) error
+	InsertCategory(tx *sqlx.Tx, model CreateCategoryRequest) (Category, error)
 	DeleteCategory(tx *sqlx.Tx, id int) error
 }
 
@@ -31,21 +32,21 @@ func (r *categoryRepository) GetListCategoriesPagination(params common.ParamsLis
 
 	rows, err := r.db.NamedQuery(finalQuery, args)
 	if err != nil {
-		log.Error("Failed to execute query:", err)
+		slog.Error("Failed to execute query", "error", err)
 		return nil, response.InternalServerError("Failed to execute query", nil)
 	}
 
 	defer func(rows *sqlx.Rows) {
 		err := rows.Close()
 		if err != nil {
-			log.Error("failed to close rows:", err)
+			slog.Error("failed to close rows", "error", err)
 			return
 		}
 	}(rows)
 	for rows.Next() {
 		var category Category
 		if err := rows.StructScan(&category); err != nil {
-			log.Error("Failed to scan category:", err)
+			slog.Error("Failed to scan category", "error", err)
 			return nil, response.InternalServerError("Failed to scan category", nil)
 		}
 		record = append(record, category)
@@ -58,19 +59,19 @@ func (r *categoryRepository) GetListCategoriesPagination(params common.ParamsLis
 	countStmt, err := r.db.PrepareNamed(countFinalQuery)
 
 	if err != nil {
-		log.Error("Failed to prepare count statement:", err)
+		slog.Error("Failed to prepare count statement", "error", err)
 		return nil, response.InternalServerError("Failed to prepare count statement", nil)
 	}
 	defer func(countStmt *sqlx.NamedStmt) {
 		err := countStmt.Close()
 		if err != nil {
-			log.Error("failed to close count statement:", err)
+			slog.Error("failed to close count statement", "error", err)
 			return
 		}
 	}(countStmt)
 	err = countStmt.Get(&totalData, countArgs)
 	if err != nil {
-		log.Error("Failed to get total data:", err)
+		slog.Error("Failed to get total data", "error", err)
 		return nil, response.InternalServerError("Failed to get total data", nil)
 	}
 
@@ -91,27 +92,27 @@ func (r *categoryRepository) GetListCategoriesNoPagination(params common.ParamsL
 	var record = make([]Category, 0)
 
 	// here
-	baseQuery := `SELECT id, name FROM tm_categories`
+	baseQuery := `SELECT id, name, icon FROM tm_categories`
 
 	finalQuery, args := common.BuildFilterQuery(baseQuery, params, &mappingFieldType, "")
 
 	rows, err := r.db.NamedQuery(finalQuery, args)
 	if err != nil {
-		log.Error("Failed to execute query:", err)
+		slog.Error("Failed to execute query", "error", err)
 		return nil, response.InternalServerError("Failed to execute query", nil)
 	}
 
 	defer func(rows *sqlx.Rows) {
 		err := rows.Close()
 		if err != nil {
-			log.Error("failed to close rows:", err)
+			slog.Error("failed to close rows", "error", err)
 			return
 		}
 	}(rows)
 	for rows.Next() {
 		var category Category
 		if err := rows.StructScan(&category); err != nil {
-			log.Error("Failed to scan category:", err)
+			slog.Error("Failed to scan category", "error", err)
 			return nil, response.InternalServerError("Failed to scan category", nil)
 		}
 		record = append(record, category)
@@ -120,15 +121,16 @@ func (r *categoryRepository) GetListCategoriesNoPagination(params common.ParamsL
 	return record, nil
 }
 
-func (r *categoryRepository) InsertCategory(tx *sqlx.Tx, model CreateCategoryRequest) error {
+func (r *categoryRepository) InsertCategory(tx *sqlx.Tx, model CreateCategoryRequest) (Category, error) {
 	// Implementation here
-	query := `INSERT INTO tm_categories (name, created_by) VALUES ($1, $2)`
-	_, err := tx.Exec(query, model.Name, model.CreatedBy)
+	query := `INSERT INTO tm_categories (name, icon, created_by) VALUES ($1, $2, $3) RETURNING id, name, icon`
+	var category Category
+	err := tx.QueryRowx(query, model.Name, model.Icon, model.CreatedBy).StructScan(&category)
 	if err != nil {
-		log.Error("Failed to insert category:", err)
-		return response.InternalServerError("Failed to insert category", nil)
+		slog.Error("Failed to insert category", "error", err)
+		return category, response.InternalServerError("Failed to insert category", nil)
 	}
-	return nil
+	return category, nil
 }
 
 func (r *categoryRepository) DeleteCategory(tx *sqlx.Tx, id int) error {
@@ -136,12 +138,12 @@ func (r *categoryRepository) DeleteCategory(tx *sqlx.Tx, id int) error {
 	query := `DELETE FROM tm_categories WHERE id = $1`
 	row, err := tx.Exec(query, id)
 	if err != nil {
-		log.Error("Failed to delete category:", err)
+		slog.Error("Failed to delete category", "error", err)
 		return response.InternalServerError("Failed to delete category", nil)
 	}
 	affected, err := row.RowsAffected()
 	if err != nil {
-		log.Error("Failed to get affected rows:", err)
+		slog.Error("Failed to get affected rows", "error", err)
 		return response.InternalServerError("Failed to get affected rows", nil)
 	}
 	if affected == 0 {

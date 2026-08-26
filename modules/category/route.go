@@ -1,12 +1,13 @@
 package category
 
 import (
+	"log/slog"
+
 	"eka-dev.cloud/master-data/lib"
 	"eka-dev.cloud/master-data/middleware"
 	"eka-dev.cloud/master-data/utils/common"
 	"eka-dev.cloud/master-data/utils/response"
 	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/log"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -30,8 +31,8 @@ func NewHandler(app *fiber.App, db *sqlx.DB) Handler {
 	// mapping routes
 	routes := app.Group("/api/1.0/categories")
 	routes.Get("", handler.GetCategories)
-	routes.Post("", middleware.RequireRole("admin"), handler.CreateCategory)
-	routes.Delete("", middleware.RequireRole("admin"), handler.DeleteCategory)
+	routes.Post("", middleware.RequirePermission("category", "create"), handler.CreateCategory)
+	routes.Delete("", middleware.RequirePermission("category", "delete"), handler.DeleteCategory)
 
 	return handler
 }
@@ -68,7 +69,7 @@ func (h *handler) CreateCategory(c *fiber.Ctx) error {
 	var request CreateCategoryRequest
 	err := c.BodyParser(&request)
 	if err != nil {
-		log.Error("Error parsing request body: ", err)
+		slog.Error("Error parsing request body", "error", err)
 		return response.BadRequest("Invalid request body", nil)
 	}
 
@@ -84,12 +85,12 @@ func (h *handler) CreateCategory(c *fiber.Ctx) error {
 
 	request.CreatedBy = claims.UserId
 
-	err = common.WithTransaction[CreateCategoryRequest](h.db, h.service.InsertCategory, request)
+	newCategory, err := common.WithTransactionReturn[CreateCategoryRequest, Category](h.db, h.service.InsertCategory, request)
 	if err != nil {
 		return err
 	}
 
-	return c.Status(fiber.StatusCreated).JSON(response.Success("Category created successfully", nil))
+	return c.Status(fiber.StatusCreated).JSON(response.Success("Category created successfully", newCategory))
 }
 
 func (h *handler) DeleteCategory(c *fiber.Ctx) error {

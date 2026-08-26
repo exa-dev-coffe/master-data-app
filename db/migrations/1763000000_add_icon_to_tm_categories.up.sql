@@ -1,0 +1,1 @@
+ALTER TABLE tm_categories ADD COLUMN icon VARCHAR(255) DEFAULT '';
