@@ -1,6 +1,7 @@
 package lib
 
 import (
+	"bytes"
 	"context"
 	"log/slog"
 	"mime/multipart"
@@ -62,6 +63,26 @@ func UploadFile(filePath string, fileHeader *multipart.FileHeader) (string, erro
 	})
 	if err != nil {
 		slog.Error("Failed to upload file to MinIO", "error", err)
+		return "", response.InternalServerError("Failed to upload file", nil)
+	}
+
+	url := config.Config.MinioBaseURL + "/" + bucketName + "/" + info.Key
+	return url, nil
+}
+
+func UploadBytes(filePath string, data []byte, contentType string) (string, error) {
+	if minioClient == nil {
+		return "", response.InternalServerError("MinIO client uninitialized", nil)
+	}
+	bucketName := config.Config.MinioBucketName
+	ctx := context.Background()
+
+	reader := bytes.NewReader(data)
+	info, err := minioClient.PutObject(ctx, bucketName, filePath, reader, int64(len(data)), minio.PutObjectOptions{
+		ContentType: contentType,
+	})
+	if err != nil {
+		slog.Error("Failed to upload bytes to MinIO", "error", err)
 		return "", response.InternalServerError("Failed to upload file", nil)
 	}
 

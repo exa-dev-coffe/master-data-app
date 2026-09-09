@@ -76,10 +76,11 @@ func ValidateImageFile(fileHeader *multipart.FileHeader) (*multipart.FileHeader,
 		"image/jpeg": true,
 		"image/png":  true,
 		"image/gif":  true,
+		"image/webp": true,
 	}
 
 	if !allowedTypes[fileHeader.Header.Get("Content-Type")] {
-		return nil, response.BadRequest("Invalid file type. Only JPEG, PNG, and GIF are allowed", nil)
+		return nil, response.BadRequest("Invalid file type. Only JPEG, PNG, WEBP, and GIF are allowed", nil)
 	}
 
 	return fileHeader, nil
