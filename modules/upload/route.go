@@ -52,7 +52,7 @@ func (s *handler) UploadMenuFoto(c *fiber.Ctx) error {
 		return err
 	}
 
-	res, err := s.service.UploadMenuFoto(fileHeader)
+	res, err := s.service.UploadMenuFoto(c.UserContext(), fileHeader)
 
 	if err != nil {
 		return err
@@ -74,7 +74,7 @@ func (s *handler) DeleteMenuFoto(c *fiber.Ctx) error {
 		return err
 	}
 
-	err = s.service.DeleteMenuFoto(request.Url)
+	err = s.service.DeleteMenuFoto(c.UserContext(), request.Url)
 	if err != nil {
 		return err
 	}

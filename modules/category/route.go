@@ -53,9 +53,9 @@ func (h *handler) GetCategories(c *fiber.Ctx) error {
 
 	var records interface{}
 	if paramsListRequest.NoPaginate {
-		records, err = h.service.GetListCategoriesNoPagination(paramsListRequest)
+		records, err = h.service.GetListCategoriesNoPagination(c.UserContext(), paramsListRequest)
 	} else {
-		records, err = h.service.GetListCategoriesPagination(paramsListRequest)
+		records, err = h.service.GetListCategoriesPagination(c.UserContext(), paramsListRequest)
 	}
 
 	if err != nil {
@@ -85,7 +85,7 @@ func (h *handler) CreateCategory(c *fiber.Ctx) error {
 
 	request.CreatedBy = claims.UserId
 
-	newCategory, err := common.WithTransactionReturn[CreateCategoryRequest, Category](h.db, h.service.InsertCategory, request)
+	newCategory, err := common.WithTransactionReturnContext[CreateCategoryRequest, Category](c.UserContext(), h.db, h.service.InsertCategory, request)
 	if err != nil {
 		return err
 	}
@@ -99,7 +99,7 @@ func (h *handler) DeleteCategory(c *fiber.Ctx) error {
 		return err
 	}
 
-	err = common.WithTransaction[*common.OneRequest](h.db, h.service.DeleteCategory, request)
+	err = common.WithTransactionContext[*common.OneRequest](c.UserContext(), h.db, h.service.DeleteCategory, request)
 	if err != nil {
 		return err
 	}

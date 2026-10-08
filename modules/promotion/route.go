@@ -1,6 +1,7 @@
 package promotion
 
 import (
+	"context"
 	"log/slog"
 	"strconv"
 
@@ -62,7 +63,7 @@ func (h *handler) CreatePromotion(c *fiber.Ctx) error {
 		req.CreatedBy = claims.UserId
 	}
 
-	id, err := h.service.CreatePromotion(nil, req)
+	id, err := common.WithTransactionReturnContext[CreatePromotionRequest, int64](c.UserContext(), h.db, h.service.CreatePromotion, req)
 	if err != nil {
 		return err
 	}
@@ -76,7 +77,7 @@ func (h *handler) GetPromotionByID(c *fiber.Ctx) error {
 		return response.BadRequest("Invalid promotion ID", nil)
 	}
 
-	p, err := h.service.GetPromotionByID(id)
+	p, err := h.service.GetPromotionByID(c.UserContext(), id)
 	if err != nil {
 		return err
 	}
@@ -96,7 +97,7 @@ func (h *handler) ListPromotions(c *fiber.Ctx) error {
 		return err
 	}
 
-	res, err := h.service.ListPromotions(paramsListRequest)
+	res, err := h.service.ListPromotions(c.UserContext(), paramsListRequest)
 	if err != nil {
 		return err
 	}
@@ -126,7 +127,7 @@ func (h *handler) UpdatePromotion(c *fiber.Ctx) error {
 		req.UpdatedBy = claims.UserId
 	}
 
-	err = h.service.UpdatePromotion(nil, req)
+	err = common.WithTransactionContext[UpdatePromotionRequest](c.UserContext(), h.db, h.service.UpdatePromotion, req)
 	if err != nil {
 		return err
 	}
@@ -146,7 +147,9 @@ func (h *handler) UpdatePromotionStatus(c *fiber.Ctx) error {
 		return response.BadRequest("Invalid request body", nil)
 	}
 
-	err = h.service.UpdatePromotionStatus(nil, id, req.IsActive)
+	err = common.WithTransactionContext(c.UserContext(), h.db, func(ctx context.Context, tx *sqlx.Tx, _ interface{}) error {
+		return h.service.UpdatePromotionStatus(ctx, tx, id, req.IsActive)
+	}, nil)
 	if err != nil {
 		return err
 	}
@@ -167,7 +170,7 @@ func (h *handler) ActivatePromotion(c *fiber.Ctx) error {
 		return err
 	}
 
-	err := h.service.ActivatePromotion(nil, req.ID)
+	err := common.WithTransactionContext[int64](c.UserContext(), h.db, h.service.ActivatePromotion, req.ID)
 	if err != nil {
 		return err
 	}
@@ -188,7 +191,7 @@ func (h *handler) DeactivatePromotion(c *fiber.Ctx) error {
 		return err
 	}
 
-	err := h.service.DeactivatePromotion(nil, req.ID)
+	err := common.WithTransactionContext[int64](c.UserContext(), h.db, h.service.DeactivatePromotion, req.ID)
 	if err != nil {
 		return err
 	}
@@ -202,7 +205,7 @@ func (h *handler) DeletePromotion(c *fiber.Ctx) error {
 		return response.BadRequest("Invalid promotion ID", nil)
 	}
 
-	err = h.service.DeletePromotion(nil, id)
+	err = common.WithTransactionContext[int64](c.UserContext(), h.db, h.service.DeletePromotion, id)
 	if err != nil {
 		return err
 	}

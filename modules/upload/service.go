@@ -2,6 +2,7 @@ package upload
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"image"
 	_ "image/gif"
@@ -21,8 +22,8 @@ import (
 )
 
 type Service interface {
-	UploadMenuFoto(fileHeader *multipart.FileHeader) (*UploadResponse, error)
-	DeleteMenuFoto(fileName string) error
+	UploadMenuFoto(ctx context.Context, fileHeader *multipart.FileHeader) (*UploadResponse, error)
+	DeleteMenuFoto(ctx context.Context, fileName string) error
 }
 
 type uploadService struct {
@@ -68,7 +69,7 @@ func extractFileNameFromURL(url string) (string, error) {
 	}
 }
 
-func (s *uploadService) UploadMenuFoto(fileHeader *multipart.FileHeader) (*UploadResponse, error) {
+func (s *uploadService) UploadMenuFoto(ctx context.Context, fileHeader *multipart.FileHeader) (*UploadResponse, error) {
 	file, err := fileHeader.Open()
 	if err != nil {
 		slog.Error("Failed to open uploaded file", "error", err)
@@ -92,7 +93,7 @@ func (s *uploadService) UploadMenuFoto(fileHeader *multipart.FileHeader) (*Uploa
 		if err != nil {
 			return nil, err
 		}
-		url, err = lib.UploadBytes(fileName, fileBytes, "image/webp")
+		url, err = lib.UploadBytes(ctx, fileName, fileBytes, "image/webp")
 		if err != nil {
 			return nil, err
 		}
@@ -107,7 +108,7 @@ func (s *uploadService) UploadMenuFoto(fileHeader *multipart.FileHeader) (*Uploa
 				if err != nil {
 					return nil, err
 				}
-				url, err = lib.UploadBytes(fileName, webpBuf.Bytes(), "image/webp")
+				url, err = lib.UploadBytes(ctx, fileName, webpBuf.Bytes(), "image/webp")
 				if err != nil {
 					return nil, err
 				}
@@ -124,7 +125,7 @@ func (s *uploadService) UploadMenuFoto(fileHeader *multipart.FileHeader) (*Uploa
 			if err != nil {
 				return nil, err
 			}
-			url, err = lib.UploadBytes(fileName, fileBytes, contentType)
+			url, err = lib.UploadBytes(ctx, fileName, fileBytes, contentType)
 			if err != nil {
 				return nil, err
 			}
@@ -136,12 +137,12 @@ func (s *uploadService) UploadMenuFoto(fileHeader *multipart.FileHeader) (*Uploa
 	}, nil
 }
 
-func (s *uploadService) DeleteMenuFoto(url string) error {
+func (s *uploadService) DeleteMenuFoto(ctx context.Context, url string) error {
 	filepathFromUrl, err := extractFileNameFromURL(url)
 	if err != nil {
 		return err
 	}
-	err = lib.DeleteFile(filepathFromUrl)
+	err = lib.DeleteFile(ctx, filepathFromUrl)
 	if err != nil {
 		return err
 	}

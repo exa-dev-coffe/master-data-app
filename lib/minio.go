@@ -45,12 +45,14 @@ func SetMinioClient(client *minio.Client) {
 	minioClient = client
 }
 
-func UploadFile(filePath string, fileHeader *multipart.FileHeader) (string, error) {
+func UploadFile(ctx context.Context, filePath string, fileHeader *multipart.FileHeader) (string, error) {
 	if minioClient == nil {
 		return "", response.InternalServerError("MinIO client uninitialized", nil)
 	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
 	bucketName := config.Config.MinioBucketName
-	ctx := context.Background()
 
 	file, err := fileHeader.Open()
 	if err != nil {
@@ -70,12 +72,14 @@ func UploadFile(filePath string, fileHeader *multipart.FileHeader) (string, erro
 	return url, nil
 }
 
-func UploadBytes(filePath string, data []byte, contentType string) (string, error) {
+func UploadBytes(ctx context.Context, filePath string, data []byte, contentType string) (string, error) {
 	if minioClient == nil {
 		return "", response.InternalServerError("MinIO client uninitialized", nil)
 	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
 	bucketName := config.Config.MinioBucketName
-	ctx := context.Background()
 
 	reader := bytes.NewReader(data)
 	info, err := minioClient.PutObject(ctx, bucketName, filePath, reader, int64(len(data)), minio.PutObjectOptions{
@@ -90,13 +94,14 @@ func UploadBytes(filePath string, data []byte, contentType string) (string, erro
 	return url, nil
 }
 
-func DeleteFile(filePath string) error {
+func DeleteFile(ctx context.Context, filePath string) error {
 	if minioClient == nil {
 		return response.InternalServerError("MinIO client uninitialized", nil)
 	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
 	bucketName := config.Config.MinioBucketName
-
-	ctx := context.Background()
 
 	err := minioClient.RemoveObject(ctx, bucketName, filePath, minio.RemoveObjectOptions{})
 	if err != nil {

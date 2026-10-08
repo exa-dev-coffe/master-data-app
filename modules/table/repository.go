@@ -1,6 +1,7 @@
 package table
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"log/slog"
@@ -11,13 +12,13 @@ import (
 )
 
 type Repository interface {
-	GetListTablesPagination(params common.ParamsListRequest) (*response.Pagination[[]Table], error)
-	getListTablesNoPagination(params common.ParamsListRequest) ([]Table, error)
-	InsertTable(tx *sqlx.Tx, model CreateTableRequest) error
-	UpdateTable(tx *sqlx.Tx, model UpdateTableRequest) error
-	DeleteTable(tx *sqlx.Tx, id int, updatedBy int64) error
-	ValidateTable(tableId int64) error
-	GetTablesByIds(tableIds []int) ([]InternalTableResponse, error)
+	GetListTablesPagination(ctx context.Context, params common.ParamsListRequest) (*response.Pagination[[]Table], error)
+	getListTablesNoPagination(ctx context.Context, params common.ParamsListRequest) ([]Table, error)
+	InsertTable(ctx context.Context, tx *sqlx.Tx, model CreateTableRequest) error
+	UpdateTable(ctx context.Context, tx *sqlx.Tx, model UpdateTableRequest) error
+	DeleteTable(ctx context.Context, tx *sqlx.Tx, id int, updatedBy int64) error
+	ValidateTable(ctx context.Context, tableId int64) error
+	GetTablesByIds(ctx context.Context, tableIds []int) ([]InternalTableResponse, error)
 }
 
 type tableRepository struct {
@@ -28,11 +29,11 @@ func NewTableRepository(db *sqlx.DB) Repository {
 	return &tableRepository{db: db}
 }
 
-func (r *tableRepository) GetListTablesPagination(params common.ParamsListRequest) (*response.Pagination[[]Table], error) {
+func (r *tableRepository) GetListTablesPagination(ctx context.Context, params common.ParamsListRequest) (*response.Pagination[[]Table], error) {
 	// Implementation
 	var record = make([]Table, 0)
 	finalQuery, args := common.BuildFilterQuery(baseQuery, params, &mappingFieldType, "")
-	rows, err := r.db.NamedQuery(finalQuery, args)
+	rows, err := r.db.NamedQueryContext(ctx, finalQuery, args)
 	if err != nil {
 		slog.Error("Failed to execute query", "error", err)
 		return nil, response.InternalServerError("Failed to execute query", nil)
@@ -56,7 +57,7 @@ func (r *tableRepository) GetListTablesPagination(params common.ParamsListReques
 	var totalData int
 	countQuery := `SELECT COUNT(*) FROM tm_tables WHERE is_deleted = FALSE`
 	countFinalQuery, countArgs := common.BuildCountQuery(countQuery, params, &mappingFieldType)
-	countStmt, err := r.db.PrepareNamed(countFinalQuery)
+	countStmt, err := r.db.PrepareNamedContext(ctx, countFinalQuery)
 
 	if err != nil {
 		slog.Error("Failed to prepare count statement", "error", err)
@@ -69,7 +70,7 @@ func (r *tableRepository) GetListTablesPagination(params common.ParamsListReques
 			return
 		}
 	}(countStmt)
-	err = countStmt.Get(&totalData, countArgs)
+	err = countStmt.GetContext(ctx, &totalData, countArgs)
 	if err != nil {
 		slog.Error("Failed to get total data", "error", err)
 		return nil, response.InternalServerError("Failed to get total data", nil)
@@ -85,12 +86,12 @@ func (r *tableRepository) GetListTablesPagination(params common.ParamsListReques
 	return &pagination, nil
 }
 
-func (r *tableRepository) getListTablesNoPagination(params common.ParamsListRequest) ([]Table, error) {
+func (r *tableRepository) getListTablesNoPagination(ctx context.Context, params common.ParamsListRequest) ([]Table, error) {
 	// Implementation
 	var record = make([]Table, 0)
 
 	finalQuery, args := common.BuildFilterQuery(baseQuery, params, &mappingFieldType, "")
-	rows, err := r.db.NamedQuery(finalQuery, args)
+	rows, err := r.db.NamedQueryContext(ctx, finalQuery, args)
 	if err != nil {
 		slog.Error("Failed to execute query", "error", err)
 		return nil, response.InternalServerError("Failed to execute query", nil)
@@ -113,9 +114,9 @@ func (r *tableRepository) getListTablesNoPagination(params common.ParamsListRequ
 	return record, nil
 }
 
-func (r *tableRepository) InsertTable(tx *sqlx.Tx, model CreateTableRequest) error {
+func (r *tableRepository) InsertTable(ctx context.Context, tx *sqlx.Tx, model CreateTableRequest) error {
 	query := `INSERT INTO tm_tables (name, created_at, updated_at, created_by) VALUES ($1, NOW(), NOW(), $2)`
-	_, err := tx.Exec(query, model.Name, model.CreatedBy)
+	_, err := tx.ExecContext(ctx, query, model.Name, model.CreatedBy)
 	if err != nil {
 		slog.Error("Failed to insert table", "error", err)
 		return response.InternalServerError("Failed to insert table", nil)
@@ -123,9 +124,9 @@ func (r *tableRepository) InsertTable(tx *sqlx.Tx, model CreateTableRequest) err
 	return nil
 }
 
-func (r *tableRepository) UpdateTable(tx *sqlx.Tx, model UpdateTableRequest) error {
+func (r *tableRepository) UpdateTable(ctx context.Context, tx *sqlx.Tx, model UpdateTableRequest) error {
 	query := `UPDATE tm_tables SET name = $1, updated_at = NOW(), updated_by = $2 WHERE id = $3`
-	result, err := tx.Exec(query, model.Name, model.UpdatedBy, model.Id)
+	result, err := tx.ExecContext(ctx, query, model.Name, model.UpdatedBy, model.Id)
 	if err != nil {
 		slog.Error("Failed to update table", "error", err)
 		return response.InternalServerError("Failed to update table", nil)
@@ -137,9 +138,9 @@ func (r *tableRepository) UpdateTable(tx *sqlx.Tx, model UpdateTableRequest) err
 	return nil
 }
 
-func (r *tableRepository) DeleteTable(tx *sqlx.Tx, id int, updatedBy int64) error {
+func (r *tableRepository) DeleteTable(ctx context.Context, tx *sqlx.Tx, id int, updatedBy int64) error {
 	query := `UPDATE tm_tables SET deleted_at = NOW(), deleted_by = $2, is_deleted = TRUE WHERE id = $1`
-	result, err := tx.Exec(query, id, updatedBy)
+	result, err := tx.ExecContext(ctx, query, id, updatedBy)
 	if err != nil {
 		slog.Error("Failed to delete table", "error", err)
 		return response.InternalServerError("Failed to delete table", nil)
@@ -151,11 +152,11 @@ func (r *tableRepository) DeleteTable(tx *sqlx.Tx, id int, updatedBy int64) erro
 	return nil
 }
 
-func (r *tableRepository) ValidateTable(tableId int64) error {
+func (r *tableRepository) ValidateTable(ctx context.Context, tableId int64) error {
 	var table int
 	query := `SELECT id FROM tm_tables WHERE id = $1`
 
-	err := r.db.Get(&table, query, tableId)
+	err := r.db.GetContext(ctx, &table, query, tableId)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return response.BadRequest("Table not found", nil)
@@ -166,7 +167,7 @@ func (r *tableRepository) ValidateTable(tableId int64) error {
 	return nil
 }
 
-func (r *tableRepository) GetTablesByIds(tableIds []int) ([]InternalTableResponse, error) {
+func (r *tableRepository) GetTablesByIds(ctx context.Context, tableIds []int) ([]InternalTableResponse, error) {
 	var tables []InternalTableResponse
 
 	query, args, err := sqlx.In(`SELECT id, name FROM tm_tables WHERE id IN (?)`, tableIds)
@@ -178,7 +179,7 @@ func (r *tableRepository) GetTablesByIds(tableIds []int) ([]InternalTableRespons
 
 	query = r.db.Rebind(query)
 
-	err = r.db.Select(&tables, query, args...)
+	err = r.db.SelectContext(ctx, &tables, query, args...)
 	if err != nil {
 		slog.Error("Failed to get table by ids", "error", err)
 		return nil, response.InternalServerError("Failed to get table by ids", nil)

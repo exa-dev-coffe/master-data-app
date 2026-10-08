@@ -1,6 +1,7 @@
 package promotion
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"log/slog"
@@ -12,14 +13,14 @@ import (
 )
 
 type Repository interface {
-	InsertPromotion(tx *sqlx.Tx, req CreatePromotionRequest, isActive bool) (int64, error)
-	GetPromotionByID(id int64) (*Promotion, error)
-	ListPromotions(params common.ParamsListRequest) (*response.Pagination[[]Promotion], error)
-	UpdatePromotion(tx *sqlx.Tx, req UpdatePromotionRequest) error
-	UpdatePromotionStatus(tx *sqlx.Tx, id int64, isActive bool) error
-	DeletePromotionByID(tx *sqlx.Tx, id int64) error
-	GetActivePromotionForMenu(menuID int64, categoryID int64, price float64) (*MenuDiscountInfo, error)
-	CheckOverlappingPromotion(tx *sqlx.Tx, targetType string, targetID *int64, startAt, endAt string, excludeID int64) (*Promotion, error)
+	InsertPromotion(ctx context.Context, tx *sqlx.Tx, req CreatePromotionRequest, isActive bool) (int64, error)
+	GetPromotionByID(ctx context.Context, id int64) (*Promotion, error)
+	ListPromotions(ctx context.Context, params common.ParamsListRequest) (*response.Pagination[[]Promotion], error)
+	UpdatePromotion(ctx context.Context, tx *sqlx.Tx, req UpdatePromotionRequest) error
+	UpdatePromotionStatus(ctx context.Context, tx *sqlx.Tx, id int64, isActive bool) error
+	DeletePromotionByID(ctx context.Context, tx *sqlx.Tx, id int64) error
+	GetActivePromotionForMenu(ctx context.Context, menuID int64, categoryID int64, price float64) (*MenuDiscountInfo, error)
+	CheckOverlappingPromotion(ctx context.Context, tx *sqlx.Tx, targetType string, targetID *int64, startAt, endAt string, excludeID int64) (*Promotion, error)
 }
 
 type repository struct {
@@ -30,7 +31,7 @@ func NewRepository(db *sqlx.DB) Repository {
 	return &repository{db: db}
 }
 
-func (r *repository) InsertPromotion(tx *sqlx.Tx, req CreatePromotionRequest, isActive bool) (int64, error) {
+func (r *repository) InsertPromotion(ctx context.Context, tx *sqlx.Tx, req CreatePromotionRequest, isActive bool) (int64, error) {
 	query := `
 		INSERT INTO tm_promotions (
 			name, target_type, target_id, discount_type, discount_value, 
@@ -38,9 +39,8 @@ func (r *repository) InsertPromotion(tx *sqlx.Tx, req CreatePromotionRequest, is
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 		RETURNING id
 	`
-	execer := r.getExecer(tx)
 	var id int64
-	err := execer.QueryRowx(query,
+	err := tx.QueryRowxContext(ctx, query,
 		req.Name, req.TargetType, req.TargetID, req.DiscountType, req.DiscountValue,
 		req.MaxDiscount, req.MinPurchase, req.StartAt, req.EndAt, isActive, req.CreatedBy,
 	).Scan(&id)
@@ -51,7 +51,7 @@ func (r *repository) InsertPromotion(tx *sqlx.Tx, req CreatePromotionRequest, is
 	return id, nil
 }
 
-func (r *repository) GetPromotionByID(id int64) (*Promotion, error) {
+func (r *repository) GetPromotionByID(ctx context.Context, id int64) (*Promotion, error) {
 	query := `
 		SELECT 
 			p.id, p.name, p.target_type, p.target_id,
@@ -77,7 +77,7 @@ func (r *repository) GetPromotionByID(id int64) (*Promotion, error) {
 		WHERE p.id = $1 AND p.deleted_at IS NULL
 	`
 	var p Promotion
-	err := r.db.Get(&p, query, id)
+	err := r.db.GetContext(ctx, &p, query, id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, response.NotFound("Promotion not found", nil)
@@ -88,13 +88,13 @@ func (r *repository) GetPromotionByID(id int64) (*Promotion, error) {
 	return &p, nil
 }
 
-func (r *repository) ListPromotions(params common.ParamsListRequest) (*response.Pagination[[]Promotion], error) {
+func (r *repository) ListPromotions(ctx context.Context, params common.ParamsListRequest) (*response.Pagination[[]Promotion], error) {
 	record := make([]Promotion, 0)
 
 	query := baseQuery + " WHERE p.deleted_at IS NULL "
 	finalQuery, args := common.BuildFilterQuery(query, params, &mappingFieldType, "")
 
-	rows, err := r.db.NamedQuery(finalQuery, args)
+	rows, err := r.db.NamedQueryContext(ctx, finalQuery, args)
 	if err != nil {
 		slog.Error("Failed to execute list promotions query", "error", err)
 		return nil, response.InternalServerError("Failed to execute query", nil)
@@ -115,7 +115,7 @@ func (r *repository) ListPromotions(params common.ParamsListRequest) (*response.
 	var totalData int
 	countQuery := `SELECT COUNT(*) FROM tm_promotions p WHERE p.deleted_at IS NULL `
 	countFinalQuery, countArgs := common.BuildCountQuery(countQuery, params, &mappingFieldType)
-	countStmt, err := r.db.PrepareNamed(countFinalQuery)
+	countStmt, err := r.db.PrepareNamedContext(ctx, countFinalQuery)
 	if err != nil {
 		slog.Error("Failed to prepare promotion count query", "error", err)
 		return nil, response.InternalServerError("Failed to prepare count query", nil)
@@ -124,7 +124,7 @@ func (r *repository) ListPromotions(params common.ParamsListRequest) (*response.
 		_ = countStmt.Close()
 	}(countStmt)
 
-	err = countStmt.Get(&totalData, countArgs)
+	err = countStmt.GetContext(ctx, &totalData, countArgs)
 	if err != nil {
 		slog.Error("Failed to execute promotion count query", "error", err)
 		return nil, response.InternalServerError("Failed to get total data", nil)
@@ -153,15 +153,14 @@ func (r *repository) ListPromotions(params common.ParamsListRequest) (*response.
 	return &pagination, nil
 }
 
-func (r *repository) UpdatePromotion(tx *sqlx.Tx, req UpdatePromotionRequest) error {
+func (r *repository) UpdatePromotion(ctx context.Context, tx *sqlx.Tx, req UpdatePromotionRequest) error {
 	query := `
 		UPDATE tm_promotions
 		SET name = $1, target_type = $2, target_id = $3, discount_type = $4, discount_value = $5,
 		    max_discount = $6, min_purchase = $7, start_at = $8, end_at = $9, updated_by = $10, updated_at = CURRENT_TIMESTAMP
 		WHERE id = $11 AND deleted_at IS NULL
 	`
-	execer := r.getExecer(tx)
-	res, err := execer.Exec(query,
+	res, err := tx.ExecContext(ctx, query,
 		req.Name, req.TargetType, req.TargetID, req.DiscountType, req.DiscountValue,
 		req.MaxDiscount, req.MinPurchase, req.StartAt, req.EndAt, req.UpdatedBy, req.ID,
 	)
@@ -176,12 +175,11 @@ func (r *repository) UpdatePromotion(tx *sqlx.Tx, req UpdatePromotionRequest) er
 	return nil
 }
 
-func (r *repository) UpdatePromotionStatus(tx *sqlx.Tx, id int64, isActive bool) error {
+func (r *repository) UpdatePromotionStatus(ctx context.Context, tx *sqlx.Tx, id int64, isActive bool) error {
 	if isActive {
 		var expired bool
 		checkQuery := `SELECT end_at <= CURRENT_TIMESTAMP FROM tm_promotions WHERE id = $1 AND deleted_at IS NULL`
-		execer := r.getExecer(tx)
-		err := execer.QueryRowx(checkQuery, id).Scan(&expired)
+		err := tx.QueryRowxContext(ctx, checkQuery, id).Scan(&expired)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				return response.NotFound("Promotion not found", nil)
@@ -199,8 +197,7 @@ func (r *repository) UpdatePromotionStatus(tx *sqlx.Tx, id int64, isActive bool)
 		SET is_active = $1, updated_at = CURRENT_TIMESTAMP
 		WHERE id = $2 AND deleted_at IS NULL
 	`
-	execer := r.getExecer(tx)
-	res, err := execer.Exec(query, isActive, id)
+	res, err := tx.ExecContext(ctx, query, isActive, id)
 	if err != nil {
 		slog.Error("Failed to update promotion status", "error", err)
 		return response.InternalServerError("Failed to update promotion status", err)
@@ -212,14 +209,13 @@ func (r *repository) UpdatePromotionStatus(tx *sqlx.Tx, id int64, isActive bool)
 	return nil
 }
 
-func (r *repository) DeletePromotionByID(tx *sqlx.Tx, id int64) error {
+func (r *repository) DeletePromotionByID(ctx context.Context, tx *sqlx.Tx, id int64) error {
 	query := `
 		UPDATE tm_promotions
 		SET deleted_at = CURRENT_TIMESTAMP, is_active = FALSE
 		WHERE id = $1 AND deleted_at IS NULL
 	`
-	execer := r.getExecer(tx)
-	res, err := execer.Exec(query, id)
+	res, err := tx.ExecContext(ctx, query, id)
 	if err != nil {
 		slog.Error("Failed to delete promotion", "error", err)
 		return response.InternalServerError("Failed to delete promotion", err)
@@ -231,7 +227,7 @@ func (r *repository) DeletePromotionByID(tx *sqlx.Tx, id int64) error {
 	return nil
 }
 
-func (r *repository) GetActivePromotionForMenu(menuID int64, categoryID int64, price float64) (*MenuDiscountInfo, error) {
+func (r *repository) GetActivePromotionForMenu(ctx context.Context, menuID int64, categoryID int64, price float64) (*MenuDiscountInfo, error) {
 	now := time.Now()
 	query := `
 		SELECT 
@@ -261,7 +257,7 @@ func (r *repository) GetActivePromotionForMenu(menuID int64, categoryID int64, p
 		MaxDiscount   float64 `db:"max_discount"`
 	}
 
-	err := r.db.Get(&p, query, now, menuID, categoryID)
+	err := r.db.GetContext(ctx, &p, query, now, menuID, categoryID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
@@ -293,7 +289,7 @@ func (r *repository) GetActivePromotionForMenu(menuID int64, categoryID int64, p
 	}, nil
 }
 
-func (r *repository) CheckOverlappingPromotion(tx *sqlx.Tx, targetType string, targetID *int64, startAt, endAt string, excludeID int64) (*Promotion, error) {
+func (r *repository) CheckOverlappingPromotion(ctx context.Context, tx *sqlx.Tx, targetType string, targetID *int64, startAt, endAt string, excludeID int64) (*Promotion, error) {
 	query := `
 		SELECT 
 			p.id, p.name, p.target_type, p.target_id, p.discount_type, p.discount_value,
@@ -311,13 +307,12 @@ func (r *repository) CheckOverlappingPromotion(tx *sqlx.Tx, targetType string, t
 		  )
 		LIMIT 1
 	`
-	execer := r.getExecer(tx)
 	var p Promotion
 	var tid *int64
 	if targetID != nil && *targetID > 0 {
 		tid = targetID
 	}
-	err := execer.QueryRowx(query, targetType, tid, excludeID, startAt, endAt).StructScan(&p)
+	err := tx.QueryRowxContext(ctx, query, targetType, tid, excludeID, startAt, endAt).StructScan(&p)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
@@ -326,11 +321,4 @@ func (r *repository) CheckOverlappingPromotion(tx *sqlx.Tx, targetType string, t
 		return nil, err
 	}
 	return &p, nil
-}
-
-func (r *repository) getExecer(tx *sqlx.Tx) sqlx.Ext {
-	if tx != nil {
-		return tx
-	}
-	return r.db
 }

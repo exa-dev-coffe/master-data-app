@@ -1,6 +1,7 @@
 package menu
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"log/slog"
@@ -12,20 +13,20 @@ import (
 )
 
 type Repository interface {
-	GetListMenusPagination(params common.ParamsListRequest) (*response.Pagination[[]Menu], error)
-	GetListMenusNoPagination(params common.ParamsListRequest) ([]Menu, error)
-	InsertMenu(tx *sqlx.Tx, model CreateMenuRequest) error
-	UpdateMenu(tx *sqlx.Tx, model UpdateMenuRequest) error
-	DeleteMenu(tx *sqlx.Tx, id int, updatedBy int64) error
-	GetOneMenu(id int) (*Menu, error)
-	GetListMenusUncategorizedNoPagination(params common.ParamsListRequest) ([]Menu, error)
-	GetListMenusUncategorizedPagination(params common.ParamsListRequest) (*response.Pagination[[]Menu], error)
-	SetMenuCategory(tx *sqlx.Tx, model SetMenuCategoryRequest) error
-	GetMenusByCategoryID(categoryID int) ([]Menu, error)
-	UpdateMenuAvailability(tx *sqlx.Tx, id int, isAvailable *bool, updatedBy int64) error
-	GetListMenusByIds(ids []int) ([]InternalMenuResponse, error)
-	GetAvailableMenusByIds(ids []int) ([]InternalAvailableMenuResponse, error)
-	UpdateRatingAndReviewCount(tx *sqlx.Tx, id int, rating float64, updatedBy int64) error
+	GetListMenusPagination(ctx context.Context, params common.ParamsListRequest) (*response.Pagination[[]Menu], error)
+	GetListMenusNoPagination(ctx context.Context, params common.ParamsListRequest) ([]Menu, error)
+	InsertMenu(ctx context.Context, tx *sqlx.Tx, model CreateMenuRequest) error
+	UpdateMenu(ctx context.Context, tx *sqlx.Tx, model UpdateMenuRequest) error
+	DeleteMenu(ctx context.Context, tx *sqlx.Tx, id int, updatedBy int64) error
+	GetOneMenu(ctx context.Context, id int) (*Menu, error)
+	GetListMenusUncategorizedNoPagination(ctx context.Context, params common.ParamsListRequest) ([]Menu, error)
+	GetListMenusUncategorizedPagination(ctx context.Context, params common.ParamsListRequest) (*response.Pagination[[]Menu], error)
+	SetMenuCategory(ctx context.Context, tx *sqlx.Tx, model SetMenuCategoryRequest) error
+	GetMenusByCategoryID(ctx context.Context, categoryID int) ([]Menu, error)
+	UpdateMenuAvailability(ctx context.Context, tx *sqlx.Tx, id int, isAvailable *bool, updatedBy int64) error
+	GetListMenusByIds(ctx context.Context, ids []int) ([]InternalMenuResponse, error)
+	GetAvailableMenusByIds(ctx context.Context, ids []int) ([]InternalAvailableMenuResponse, error)
+	UpdateRatingAndReviewCount(ctx context.Context, tx *sqlx.Tx, id int, rating float64, updatedBy int64) error
 }
 
 type menuRepository struct {
@@ -36,7 +37,7 @@ func NewMenuRepository(db *sqlx.DB) Repository {
 	return &menuRepository{db: db}
 }
 
-func (r *menuRepository) GetListMenusPagination(params common.ParamsListRequest) (*response.Pagination[[]Menu], error) {
+func (r *menuRepository) GetListMenusPagination(ctx context.Context, params common.ParamsListRequest) (*response.Pagination[[]Menu], error) {
 	// Implementation
 	var record = make([]Menu, 0)
 
@@ -45,7 +46,7 @@ func (r *menuRepository) GetListMenusPagination(params common.ParamsListRequest)
 
 	finalQuery, args := common.BuildFilterQuery(baseQuery, params, &mappingFieldType, "")
 
-	rows, err := r.db.NamedQuery(finalQuery, args)
+	rows, err := r.db.NamedQueryContext(ctx, finalQuery, args)
 	if err != nil {
 		slog.Error("Failed to execute query", "error", err)
 		return nil, response.InternalServerError("Failed to execute query", nil)
@@ -71,7 +72,7 @@ func (r *menuRepository) GetListMenusPagination(params common.ParamsListRequest)
 	var totalData int
 	countQuery := `SELECT COUNT(*) FROM tm_menus m LEFT JOIN tm_categories c ON m.category_id = c.id WHERE m.is_deleted = FALSE `
 	countFinalQuery, countArgs := common.BuildCountQuery(countQuery, params, &mappingFieldType)
-	countStmt, err := r.db.PrepareNamed(countFinalQuery)
+	countStmt, err := r.db.PrepareNamedContext(ctx, countFinalQuery)
 
 	if err != nil {
 		slog.Error("Failed to prepare count query", "error", err)
@@ -85,7 +86,7 @@ func (r *menuRepository) GetListMenusPagination(params common.ParamsListRequest)
 		}
 	}(countStmt)
 
-	if err := countStmt.Get(&totalData, countArgs); err != nil {
+	if err := countStmt.GetContext(ctx, &totalData, countArgs); err != nil {
 		slog.Error("Failed to execute count query", "error", err)
 		return nil, response.InternalServerError("Failed to execute count query", nil)
 	}
@@ -103,7 +104,7 @@ func (r *menuRepository) GetListMenusPagination(params common.ParamsListRequest)
 
 }
 
-func (r *menuRepository) GetListMenusNoPagination(params common.ParamsListRequest) ([]Menu, error) {
+func (r *menuRepository) GetListMenusNoPagination(ctx context.Context, params common.ParamsListRequest) ([]Menu, error) {
 	// Implementation
 	var record = make([]Menu, 0)
 
@@ -111,7 +112,7 @@ func (r *menuRepository) GetListMenusNoPagination(params common.ParamsListReques
 
 	finalQuery, args := common.BuildFilterQuery(baseQuery, params, &mappingFieldType, "")
 
-	rows, err := r.db.NamedQuery(finalQuery, args)
+	rows, err := r.db.NamedQueryContext(ctx, finalQuery, args)
 	if err != nil {
 		slog.Error("Failed to execute query", "error", err)
 		return nil, response.InternalServerError("Failed to execute query", nil)
@@ -137,10 +138,10 @@ func (r *menuRepository) GetListMenusNoPagination(params common.ParamsListReques
 	return record, nil
 }
 
-func (r *menuRepository) InsertMenu(tx *sqlx.Tx, model CreateMenuRequest) error {
+func (r *menuRepository) InsertMenu(ctx context.Context, tx *sqlx.Tx, model CreateMenuRequest) error {
 	// Implementation
 	query := `INSERT INTO tm_menus ( name, description, price, category_id, photo, is_available, created_by) VALUES ( $1, $2, $3, $4, $5, $6, $7)`
-	_, err := tx.Exec(query, model.Name, model.Description, model.Price, model.CategoryID, model.Photo, model.IsAvailable, model.CreatedBy)
+	_, err := tx.ExecContext(ctx, query, model.Name, model.Description, model.Price, model.CategoryID, model.Photo, model.IsAvailable, model.CreatedBy)
 	if err != nil {
 		slog.Error("Failed to insert menu", "error", err)
 		return checkErrorConstraint(err, "Failed to insert menu")
@@ -148,10 +149,10 @@ func (r *menuRepository) InsertMenu(tx *sqlx.Tx, model CreateMenuRequest) error 
 	return nil
 }
 
-func (r *menuRepository) UpdateMenu(tx *sqlx.Tx, model UpdateMenuRequest) error {
+func (r *menuRepository) UpdateMenu(ctx context.Context, tx *sqlx.Tx, model UpdateMenuRequest) error {
 	// Implementation
 	query := `UPDATE tm_menus SET name=$1, description=$2, price=$3, category_id=$4, photo=$5, is_available=$6, updated_by=$7, updated_at=NOW() WHERE id=$8`
-	info, err := tx.Exec(query, model.Name, model.Description, model.Price, model.CategoryID, model.Photo, model.IsAvailable, model.UpdatedBy, model.Id)
+	info, err := tx.ExecContext(ctx, query, model.Name, model.Description, model.Price, model.CategoryID, model.Photo, model.IsAvailable, model.UpdatedBy, model.Id)
 	if err != nil {
 		slog.Error("Failed to update menu", "error", err)
 		return checkErrorConstraint(err, "Failed to update menu")
@@ -163,11 +164,11 @@ func (r *menuRepository) UpdateMenu(tx *sqlx.Tx, model UpdateMenuRequest) error 
 	return nil
 }
 
-func (r *menuRepository) DeleteMenu(tx *sqlx.Tx, id int, updatedBy int64) error {
+func (r *menuRepository) DeleteMenu(ctx context.Context, tx *sqlx.Tx, id int, updatedBy int64) error {
 	// Implementation
 	query := `UPDATE tm_menus SET deleted_at = NOW(), deleted_by = $2, is_deleted = TRUE WHERE id = $1`
 
-	info, err := tx.Exec(query, id, updatedBy)
+	info, err := tx.ExecContext(ctx, query, id, updatedBy)
 	if err != nil {
 		slog.Error("Failed to delete menu", "error", err)
 		return response.InternalServerError("Failed to delete menu", nil)
@@ -180,10 +181,10 @@ func (r *menuRepository) DeleteMenu(tx *sqlx.Tx, id int, updatedBy int64) error 
 	return nil
 }
 
-func (r *menuRepository) GetOneMenu(id int) (*Menu, error) {
+func (r *menuRepository) GetOneMenu(ctx context.Context, id int) (*Menu, error) {
 	var menu Menu
 	query := baseQuery + ` AND m.id = $1`
-	err := r.db.Get(&menu, query, id)
+	err := r.db.GetContext(ctx, &menu, query, id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, response.NotFound("Menu not found", nil)
@@ -194,7 +195,7 @@ func (r *menuRepository) GetOneMenu(id int) (*Menu, error) {
 	return &menu, nil
 }
 
-func (r *menuRepository) GetListMenusUncategorizedNoPagination(params common.ParamsListRequest) ([]Menu, error) {
+func (r *menuRepository) GetListMenusUncategorizedNoPagination(ctx context.Context, params common.ParamsListRequest) ([]Menu, error) {
 	// Implementation
 	var record = make([]Menu, 0)
 
@@ -202,7 +203,7 @@ func (r *menuRepository) GetListMenusUncategorizedNoPagination(params common.Par
 
 	finalQuery, args := common.BuildFilterQuery(baseQueryUncategorized, params, &mappingFieldType, "")
 
-	rows, err := r.db.NamedQuery(finalQuery, args)
+	rows, err := r.db.NamedQueryContext(ctx, finalQuery, args)
 
 	if err != nil {
 		slog.Error("Failed to execute query", "error", err)
@@ -229,7 +230,7 @@ func (r *menuRepository) GetListMenusUncategorizedNoPagination(params common.Par
 	return record, nil
 }
 
-func (r *menuRepository) GetListMenusUncategorizedPagination(params common.ParamsListRequest) (*response.Pagination[[]Menu], error) {
+func (r *menuRepository) GetListMenusUncategorizedPagination(ctx context.Context, params common.ParamsListRequest) (*response.Pagination[[]Menu], error) {
 	// Implementation
 	var record = make([]Menu, 0)
 
@@ -237,7 +238,7 @@ func (r *menuRepository) GetListMenusUncategorizedPagination(params common.Param
 
 	finalQuery, args := common.BuildFilterQuery(baseQueryUncategorized, params, &mappingFieldType, "")
 
-	rows, err := r.db.NamedQuery(finalQuery, args)
+	rows, err := r.db.NamedQueryContext(ctx, finalQuery, args)
 	if err != nil {
 		slog.Error("Failed to execute query", "error", err)
 		return nil, response.InternalServerError("Failed to execute query", nil)
@@ -263,7 +264,7 @@ func (r *menuRepository) GetListMenusUncategorizedPagination(params common.Param
 	var totalData int
 	countQuery := `SELECT COUNT(*) FROM tm_menus m LEFT JOIN tm_categories c ON m.category_id = c.id WHERE c.id IS NULL AND m.is_deleted = FALSE`
 	countFinalQuery, countArgs := common.BuildCountQuery(countQuery, params, &mappingFieldType)
-	countStmt, err := r.db.PrepareNamed(countFinalQuery)
+	countStmt, err := r.db.PrepareNamedContext(ctx, countFinalQuery)
 
 	if err != nil {
 		slog.Error("Failed to prepare count query", "error", err)
@@ -277,7 +278,7 @@ func (r *menuRepository) GetListMenusUncategorizedPagination(params common.Param
 		}
 	}(countStmt)
 
-	if err := countStmt.Get(&totalData, countArgs); err != nil {
+	if err := countStmt.GetContext(ctx, &totalData, countArgs); err != nil {
 		slog.Error("Failed to execute count query", "error", err)
 		return nil, response.InternalServerError("Failed to execute count query", nil)
 	}
@@ -294,10 +295,10 @@ func (r *menuRepository) GetListMenusUncategorizedPagination(params common.Param
 	return &pagination, nil
 }
 
-func (r *menuRepository) SetMenuCategory(tx *sqlx.Tx, model SetMenuCategoryRequest) error {
+func (r *menuRepository) SetMenuCategory(ctx context.Context, tx *sqlx.Tx, model SetMenuCategoryRequest) error {
 	// Implementation
 	query := `UPDATE tm_menus SET category_id=$1, updated_by=$2, updated_at=NOW() WHERE id=$3`
-	info, err := tx.Exec(query, model.CategoryId, model.UpdatedBy, model.Id)
+	info, err := tx.ExecContext(ctx, query, model.CategoryId, model.UpdatedBy, model.Id)
 	if err != nil {
 		slog.Error("Failed to set menu category", "error", err)
 		return checkErrorConstraint(err, "Failed to set menu category")
@@ -309,10 +310,10 @@ func (r *menuRepository) SetMenuCategory(tx *sqlx.Tx, model SetMenuCategoryReque
 	return nil
 }
 
-func (r *menuRepository) GetMenusByCategoryID(categoryID int) ([]Menu, error) {
+func (r *menuRepository) GetMenusByCategoryID(ctx context.Context, categoryID int) ([]Menu, error) {
 	var menus = make([]Menu, 0)
 	query := baseQuery + ` AND c.id = $1`
-	err := r.db.Select(&menus, query, categoryID)
+	err := r.db.SelectContext(ctx, &menus, query, categoryID)
 	if err != nil {
 		slog.Error("Failed to get menus by category ID", "error", err)
 		return nil, response.InternalServerError("Failed to get menus by category ID", nil)
@@ -320,9 +321,9 @@ func (r *menuRepository) GetMenusByCategoryID(categoryID int) ([]Menu, error) {
 	return menus, nil
 }
 
-func (r *menuRepository) UpdateMenuAvailability(tx *sqlx.Tx, id int, isAvailable *bool, updatedBy int64) error {
+func (r *menuRepository) UpdateMenuAvailability(ctx context.Context, tx *sqlx.Tx, id int, isAvailable *bool, updatedBy int64) error {
 	query := `UPDATE tm_menus SET is_available=$1, updated_by=$2, updated_at=NOW() WHERE id=$3`
-	info, err := tx.Exec(query, isAvailable, updatedBy, id)
+	info, err := tx.ExecContext(ctx, query, isAvailable, updatedBy, id)
 	if err != nil {
 		slog.Error("Failed to update menu availability", "error", err)
 		return response.InternalServerError("Failed to update menu availability", nil)
@@ -334,7 +335,7 @@ func (r *menuRepository) UpdateMenuAvailability(tx *sqlx.Tx, id int, isAvailable
 	return nil
 }
 
-func (r *menuRepository) GetAvailableMenusByIds(ids []int) ([]InternalAvailableMenuResponse, error) {
+func (r *menuRepository) GetAvailableMenusByIds(ctx context.Context, ids []int) ([]InternalAvailableMenuResponse, error) {
 	if len(ids) == 0 {
 		return nil, response.BadRequest("No IDs provided", nil)
 	}
@@ -374,7 +375,7 @@ func (r *menuRepository) GetAvailableMenusByIds(ids []int) ([]InternalAvailableM
 	query = r.db.Rebind(query)
 
 	var menus []InternalAvailableMenuResponse
-	if err := r.db.Select(&menus, query, args...); err != nil {
+	if err := r.db.SelectContext(ctx, &menus, query, args...); err != nil {
 		slog.Error("Failed to get menus by IDs", "error", err)
 		return nil, response.InternalServerError("Failed to get menus by IDs", nil)
 	}
@@ -403,7 +404,7 @@ func (r *menuRepository) GetAvailableMenusByIds(ids []int) ([]InternalAvailableM
 	return menus, nil
 }
 
-func (r *menuRepository) GetListMenusByIds(ids []int) ([]InternalMenuResponse, error) {
+func (r *menuRepository) GetListMenusByIds(ctx context.Context, ids []int) ([]InternalMenuResponse, error) {
 	if len(ids) == 0 {
 		return nil, response.BadRequest("No IDs provided", nil)
 	}
@@ -444,7 +445,7 @@ func (r *menuRepository) GetListMenusByIds(ids []int) ([]InternalMenuResponse, e
 
 	var menus []InternalMenuResponse
 
-	if err := r.db.Select(&menus, query, args...); err != nil {
+	if err := r.db.SelectContext(ctx, &menus, query, args...); err != nil {
 		slog.Error("Failed to get menus by IDs", "error", err)
 		return nil, response.InternalServerError("Failed to get menus by IDs", nil)
 	}
@@ -460,7 +461,7 @@ func (r *menuRepository) GetListMenusByIds(ids []int) ([]InternalMenuResponse, e
 	return menus, nil
 }
 
-func (r *menuRepository) UpdateRatingAndReviewCount(tx *sqlx.Tx, id int, rating float64, updatedBy int64) error {
+func (r *menuRepository) UpdateRatingAndReviewCount(ctx context.Context, tx *sqlx.Tx, id int, rating float64, updatedBy int64) error {
 	query := `UPDATE tm_menus
 		SET 
 			rating = ((rating * review_count) + $1) / (review_count + 1),
@@ -468,7 +469,7 @@ func (r *menuRepository) UpdateRatingAndReviewCount(tx *sqlx.Tx, id int, rating 
 			updated_by = $2,
 			updated_at = NOW()
 		WHERE id = $3`
-	info, err := tx.Exec(query, rating, updatedBy, id)
+	info, err := tx.ExecContext(ctx, query, rating, updatedBy, id)
 	if err != nil {
 		slog.Error("Failed to update menu rating and review count", "error", err)
 		return response.InternalServerError("Failed to update menu rating and review count", nil)

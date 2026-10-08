@@ -1,6 +1,7 @@
 package common
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"log/slog"
@@ -203,7 +204,13 @@ func ParseQueryParams(queryParams map[string]string, params *ParamsListRequest) 
 }
 
 func WithTransaction[P any](db *sqlx.DB, fn func(tx *sqlx.Tx, args P) error, args P) error {
-	tx, err := db.Beginx()
+	return WithTransactionContext(context.Background(), db, func(ctx context.Context, tx *sqlx.Tx, args P) error {
+		return fn(tx, args)
+	}, args)
+}
+
+func WithTransactionContext[P any](ctx context.Context, db *sqlx.DB, fn func(ctx context.Context, tx *sqlx.Tx, args P) error, args P) error {
+	tx, err := db.BeginTxx(ctx, nil)
 	if err != nil {
 		return err
 	}
@@ -218,7 +225,7 @@ func WithTransaction[P any](db *sqlx.DB, fn func(tx *sqlx.Tx, args P) error, arg
 		}
 	}()
 
-	err = fn(tx, args)
+	err = fn(ctx, tx, args)
 	if err != nil {
 		return err
 	}
@@ -262,8 +269,14 @@ func GetInfoRowsAffected(result sql.Result) (int64, error) {
 }
 
 func WithTransactionReturn[P any, R any](db *sqlx.DB, fn func(tx *sqlx.Tx, args P) (R, error), args P) (R, error) {
+	return WithTransactionReturnContext(context.Background(), db, func(ctx context.Context, tx *sqlx.Tx, args P) (R, error) {
+		return fn(tx, args)
+	}, args)
+}
+
+func WithTransactionReturnContext[P any, R any](ctx context.Context, db *sqlx.DB, fn func(ctx context.Context, tx *sqlx.Tx, args P) (R, error), args P) (R, error) {
 	var result R
-	tx, err := db.Beginx()
+	tx, err := db.BeginTxx(ctx, nil)
 	if err != nil {
 		return result, err
 	}
@@ -278,7 +291,7 @@ func WithTransactionReturn[P any, R any](db *sqlx.DB, fn func(tx *sqlx.Tx, args 
 		}
 	}()
 
-	result, err = fn(tx, args)
+	result, err = fn(ctx, tx, args)
 	if err != nil {
 		return result, err
 	}

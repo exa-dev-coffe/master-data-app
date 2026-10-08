@@ -1,8 +1,10 @@
 package menu
 
 import (
+	"context"
 	"encoding/json"
 	"log/slog"
+	"time"
 
 	"eka-dev.cloud/master-data/lib"
 	"eka-dev.cloud/master-data/modules/upload"
@@ -56,7 +58,10 @@ func (l *menuListener) ListenSetRatingMenu() error {
 				return err
 			}
 
-			err := common.WithTransaction[UpdateRatingAndReviewCountRequest](l.db, l.service.UpdateRatingAndReviewCount, req)
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+
+			err := common.WithTransactionContext[UpdateRatingAndReviewCountRequest](ctx, l.db, l.service.UpdateRatingAndReviewCount, req)
 
 			if err != nil {
 				slog.Error("Failed to update menu rating and review count", "error", err)

@@ -75,9 +75,9 @@ func (h *handler) GetMenus(c *fiber.Ctx) error {
 
 	var records interface{}
 	if paramsListRequest.NoPaginate {
-		records, err = h.service.GetListMenusNoPagination(paramsListRequest)
+		records, err = h.service.GetListMenusNoPagination(c.UserContext(), paramsListRequest)
 	} else {
-		records, err = h.service.GetListMenusPagination(paramsListRequest)
+		records, err = h.service.GetListMenusPagination(c.UserContext(), paramsListRequest)
 	}
 
 	if err != nil {
@@ -107,7 +107,7 @@ func (h *handler) CreateMenu(c *fiber.Ctx) error {
 
 	request.CreatedBy = claims.UserId
 
-	err = common.WithTransaction[CreateMenuRequest](h.db, h.service.InsertMenu, request)
+	err = common.WithTransactionContext[CreateMenuRequest](c.UserContext(), h.db, h.service.InsertMenu, request)
 	if err != nil {
 		return err
 	}
@@ -136,7 +136,7 @@ func (h *handler) UpdateMenu(c *fiber.Ctx) error {
 
 	request.UpdatedBy = claims.UserId
 
-	err = common.WithTransaction[UpdateMenuRequest](h.db, h.service.UpdateMenu, request)
+	err = common.WithTransactionContext[UpdateMenuRequest](c.UserContext(), h.db, h.service.UpdateMenu, request)
 	if err != nil {
 		return err
 	}
@@ -157,7 +157,7 @@ func (h *handler) DeleteMenu(c *fiber.Ctx) error {
 
 	request.UpdatedBy = claims.UserId
 
-	err = common.WithTransaction[*common.OneRequest](h.db, h.service.DeleteMenu, request)
+	err = common.WithTransactionContext[*common.OneRequest](c.UserContext(), h.db, h.service.DeleteMenu, request)
 	if err != nil {
 		return err
 	}
@@ -172,7 +172,7 @@ func (h *handler) GetOneMenu(c *fiber.Ctx) error {
 		return err
 	}
 
-	menu, err := h.service.GetOneMenu(request)
+	menu, err := h.service.GetOneMenu(c.UserContext(), request)
 	if err != nil {
 		return err
 	}
@@ -196,9 +196,9 @@ func (h *handler) GetMenusUncategorized(c *fiber.Ctx) error {
 
 	var records interface{}
 	if paramsListRequest.NoPaginate {
-		records, err = h.service.GetListMenusUncategorizedNoPagination(paramsListRequest)
+		records, err = h.service.GetListMenusUncategorizedNoPagination(c.UserContext(), paramsListRequest)
 	} else {
-		records, err = h.service.GetListMenusUncategorizedPagination(paramsListRequest)
+		records, err = h.service.GetListMenusUncategorizedPagination(c.UserContext(), paramsListRequest)
 	}
 
 	if err != nil {
@@ -228,7 +228,7 @@ func (h *handler) SetMenuCategory(c *fiber.Ctx) error {
 
 	request.UpdatedBy = claims.UserId
 
-	err = common.WithTransaction[SetMenuCategoryRequest](h.db, h.service.SetMenuCategory, request)
+	err = common.WithTransactionContext[SetMenuCategoryRequest](c.UserContext(), h.db, h.service.SetMenuCategory, request)
 	if err != nil {
 		return err
 	}
@@ -242,7 +242,7 @@ func (h *handler) GetMenusByCategoryID(c *fiber.Ctx) error {
 		return err
 	}
 
-	menus, err := h.service.GetMenusByCategoryID(request.Id)
+	menus, err := h.service.GetMenusByCategoryID(c.UserContext(), request.Id)
 	if err != nil {
 		return err
 	}
@@ -270,7 +270,7 @@ func (h *handler) UpdateMenuAvailability(c *fiber.Ctx) error {
 
 	request.UpdatedBy = claims.UserId
 
-	err = common.WithTransaction[UpdateMenuAvailabilityRequest](h.db, h.service.UpdateMenuAvailability, request)
+	err = common.WithTransactionContext[UpdateMenuAvailabilityRequest](c.UserContext(), h.db, h.service.UpdateMenuAvailability, request)
 	if err != nil {
 		return err
 	}

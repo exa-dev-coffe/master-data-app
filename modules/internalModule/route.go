@@ -67,7 +67,7 @@ func (h *handler) GetAvailableMenusAndValidateTable(c *fiber.Ctx) error {
 		intIds = append(intIds, id)
 	}
 
-	menus, err := h.service.GetAvailableMenusAndValidateTable(intIds, params.TableId)
+	menus, err := h.service.GetAvailableMenusAndValidateTable(c.UserContext(), intIds, params.TableId)
 
 	if err != nil {
 		return err
@@ -105,7 +105,7 @@ func (h *handler) GetListMenusByIdsAndTable(c *fiber.Ctx) error {
 		intTablesIds = append(intTablesIds, id)
 	}
 
-	data, err := h.service.GetListMenusByIdsAndTablesByIds(intIds, intTablesIds)
+	data, err := h.service.GetListMenusByIdsAndTablesByIds(c.UserContext(), intIds, intTablesIds)
 
 	if err != nil {
 		return err

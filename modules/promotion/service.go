@@ -1,6 +1,7 @@
 package promotion
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -15,15 +16,15 @@ import (
 )
 
 type Service interface {
-	CreatePromotion(tx *sqlx.Tx, req CreatePromotionRequest) (int64, error)
-	GetPromotionByID(id int64) (*Promotion, error)
-	ListPromotions(params common.ParamsListRequest) (*response.Pagination[[]Promotion], error)
-	UpdatePromotion(tx *sqlx.Tx, req UpdatePromotionRequest) error
-	UpdatePromotionStatus(tx *sqlx.Tx, id int64, isActive bool) error
-	ActivatePromotion(tx *sqlx.Tx, id int64) error
-	DeactivatePromotion(tx *sqlx.Tx, id int64) error
-	DeletePromotion(tx *sqlx.Tx, id int64) error
-	GetActivePromotionForMenu(menuID int64, categoryID int64, price float64) (*MenuDiscountInfo, error)
+	CreatePromotion(ctx context.Context, tx *sqlx.Tx, req CreatePromotionRequest) (int64, error)
+	GetPromotionByID(ctx context.Context, id int64) (*Promotion, error)
+	ListPromotions(ctx context.Context, params common.ParamsListRequest) (*response.Pagination[[]Promotion], error)
+	UpdatePromotion(ctx context.Context, tx *sqlx.Tx, req UpdatePromotionRequest) error
+	UpdatePromotionStatus(ctx context.Context, tx *sqlx.Tx, id int64, isActive bool) error
+	ActivatePromotion(ctx context.Context, tx *sqlx.Tx, id int64) error
+	DeactivatePromotion(ctx context.Context, tx *sqlx.Tx, id int64) error
+	DeletePromotion(ctx context.Context, tx *sqlx.Tx, id int64) error
+	GetActivePromotionForMenu(ctx context.Context, menuID int64, categoryID int64, price float64) (*MenuDiscountInfo, error)
 }
 
 type service struct {
@@ -55,12 +56,12 @@ func parseTime(tStr string) (time.Time, error) {
 	return time.Time{ }, lastErr
 }
 
-func (s *service) ActivatePromotion(tx *sqlx.Tx, id int64) error {
-	return s.repo.UpdatePromotionStatus(tx, id, true)
+func (s *service) ActivatePromotion(ctx context.Context, tx *sqlx.Tx, id int64) error {
+	return s.repo.UpdatePromotionStatus(ctx, tx, id, true)
 }
 
-func (s *service) DeactivatePromotion(tx *sqlx.Tx, id int64) error {
-	return s.repo.UpdatePromotionStatus(tx, id, false)
+func (s *service) DeactivatePromotion(ctx context.Context, tx *sqlx.Tx, id int64) error {
+	return s.repo.UpdatePromotionStatus(ctx, tx, id, false)
 }
 
 func schedulePromotionTasks(id int64, startAtStr, endAtStr string) {
@@ -112,7 +113,7 @@ func schedulePromotionTasks(id int64, startAtStr, endAtStr string) {
 	}
 }
 
-func (s *service) CreatePromotion(tx *sqlx.Tx, req CreatePromotionRequest) (int64, error) {
+func (s *service) CreatePromotion(ctx context.Context, tx *sqlx.Tx, req CreatePromotionRequest) (int64, error) {
 	if req.DiscountType == "PERCENTAGE" && req.DiscountValue > 100 {
 		return 0, response.BadRequest("Percentage discount value cannot exceed 100%", nil)
 	}
@@ -129,7 +130,7 @@ func (s *service) CreatePromotion(tx *sqlx.Tx, req CreatePromotionRequest) (int6
 		return 0, response.BadRequest("End date and time must be after start date and time", nil)
 	}
 
-	existing, errOverlap := s.repo.CheckOverlappingPromotion(tx, req.TargetType, req.TargetID, req.StartAt, req.EndAt, 0)
+	existing, errOverlap := s.repo.CheckOverlappingPromotion(ctx, tx, req.TargetType, req.TargetID, req.StartAt, req.EndAt, 0)
 	if errOverlap != nil {
 		return 0, response.InternalServerError("Failed to check promotion overlap", errOverlap)
 	}
@@ -144,7 +145,7 @@ func (s *service) CreatePromotion(tx *sqlx.Tx, req CreatePromotionRequest) (int6
 		isActive = false // Future promotion starts inactive until StartAt
 	}
 
-	id, err := s.repo.InsertPromotion(tx, req, isActive)
+	id, err := s.repo.InsertPromotion(ctx, tx, req, isActive)
 	if err != nil {
 		return 0, err
 	}
@@ -154,15 +155,15 @@ func (s *service) CreatePromotion(tx *sqlx.Tx, req CreatePromotionRequest) (int6
 	return id, nil
 }
 
-func (s *service) GetPromotionByID(id int64) (*Promotion, error) {
-	return s.repo.GetPromotionByID(id)
+func (s *service) GetPromotionByID(ctx context.Context, id int64) (*Promotion, error) {
+	return s.repo.GetPromotionByID(ctx, id)
 }
 
-func (s *service) ListPromotions(params common.ParamsListRequest) (*response.Pagination[[]Promotion], error) {
-	return s.repo.ListPromotions(params)
+func (s *service) ListPromotions(ctx context.Context, params common.ParamsListRequest) (*response.Pagination[[]Promotion], error) {
+	return s.repo.ListPromotions(ctx, params)
 }
 
-func (s *service) UpdatePromotion(tx *sqlx.Tx, req UpdatePromotionRequest) error {
+func (s *service) UpdatePromotion(ctx context.Context, tx *sqlx.Tx, req UpdatePromotionRequest) error {
 	if req.DiscountType == "PERCENTAGE" && req.DiscountValue > 100 {
 		return response.BadRequest("Percentage discount value cannot exceed 100%", nil)
 	}
@@ -179,7 +180,7 @@ func (s *service) UpdatePromotion(tx *sqlx.Tx, req UpdatePromotionRequest) error
 		return response.BadRequest("End date and time must be after start date and time", nil)
 	}
 
-	existing, errOverlap := s.repo.CheckOverlappingPromotion(tx, req.TargetType, req.TargetID, req.StartAt, req.EndAt, req.ID)
+	existing, errOverlap := s.repo.CheckOverlappingPromotion(ctx, tx, req.TargetType, req.TargetID, req.StartAt, req.EndAt, req.ID)
 	if errOverlap != nil {
 		return response.InternalServerError("Failed to check promotion overlap", errOverlap)
 	}
@@ -187,7 +188,7 @@ func (s *service) UpdatePromotion(tx *sqlx.Tx, req UpdatePromotionRequest) error
 		return response.BadRequest(fmt.Sprintf("A promotion already exists in this date range for this target (%s)", existing.Name), nil)
 	}
 
-	err := s.repo.UpdatePromotion(tx, req)
+	err := s.repo.UpdatePromotion(ctx, tx, req)
 	if err != nil {
 		return err
 	}
@@ -197,14 +198,14 @@ func (s *service) UpdatePromotion(tx *sqlx.Tx, req UpdatePromotionRequest) error
 	return nil
 }
 
-func (s *service) UpdatePromotionStatus(tx *sqlx.Tx, id int64, isActive bool) error {
-	return s.repo.UpdatePromotionStatus(tx, id, isActive)
+func (s *service) UpdatePromotionStatus(ctx context.Context, tx *sqlx.Tx, id int64, isActive bool) error {
+	return s.repo.UpdatePromotionStatus(ctx, tx, id, isActive)
 }
 
-func (s *service) DeletePromotion(tx *sqlx.Tx, id int64) error {
-	return s.repo.DeletePromotionByID(tx, id)
+func (s *service) DeletePromotion(ctx context.Context, tx *sqlx.Tx, id int64) error {
+	return s.repo.DeletePromotionByID(ctx, tx, id)
 }
 
-func (s *service) GetActivePromotionForMenu(menuID int64, categoryID int64, price float64) (*MenuDiscountInfo, error) {
-	return s.repo.GetActivePromotionForMenu(menuID, categoryID, price)
+func (s *service) GetActivePromotionForMenu(ctx context.Context, menuID int64, categoryID int64, price float64) (*MenuDiscountInfo, error) {
+	return s.repo.GetActivePromotionForMenu(ctx, menuID, categoryID, price)
 }

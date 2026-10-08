@@ -50,9 +50,9 @@ func (h *handler) GetTables(c *fiber.Ctx) error {
 	}
 	var records interface{}
 	if paramsListRequest.NoPaginate {
-		records, err = h.service.GetListTablesNoPagination(paramsListRequest)
+		records, err = h.service.GetListTablesNoPagination(c.UserContext(), paramsListRequest)
 	} else {
-		records, err = h.service.GetListTablesPagination(paramsListRequest)
+		records, err = h.service.GetListTablesPagination(c.UserContext(), paramsListRequest)
 	}
 	if err != nil {
 		return err
@@ -77,7 +77,7 @@ func (h *handler) CreateTable(c *fiber.Ctx) error {
 
 	request.CreatedBy = claims.UserId
 
-	err = common.WithTransaction[CreateTableRequest](h.db, h.service.InsertTable, request)
+	err = common.WithTransactionContext[CreateTableRequest](c.UserContext(), h.db, h.service.InsertTable, request)
 	if err != nil {
 		return err
 	}
@@ -100,7 +100,7 @@ func (h *handler) UpdateTable(c *fiber.Ctx) error {
 		return err
 	}
 	request.UpdatedBy = claims.UserId
-	err = common.WithTransaction[UpdateTableRequest](h.db, h.service.UpdateTable, request)
+	err = common.WithTransactionContext[UpdateTableRequest](c.UserContext(), h.db, h.service.UpdateTable, request)
 	if err != nil {
 		return err
 	}
@@ -119,7 +119,7 @@ func (h *handler) DeleteTable(c *fiber.Ctx) error {
 	}
 
 	req.UpdatedBy = claims.UserId
-	err = common.WithTransaction[*common.OneRequest](h.db, h.service.DeleteTable, req)
+	err = common.WithTransactionContext[*common.OneRequest](c.UserContext(), h.db, h.service.DeleteTable, req)
 	if err != nil {
 		return err
 	}

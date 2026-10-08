@@ -1,14 +1,15 @@
 package internalModule
 
 import (
+	"context"
+
 	"eka-dev.cloud/master-data/modules/menu"
 	"eka-dev.cloud/master-data/modules/table"
 )
 
 type Service interface {
-	// TODO: define service methods
-	GetAvailableMenusAndValidateTable(ids []int, tableId int64) ([]menu.InternalAvailableMenuResponse, error)
-	GetListMenusByIdsAndTablesByIds(ids []int, tableIds []int) (GetMenusAndTablesResponse, error)
+	GetAvailableMenusAndValidateTable(ctx context.Context, ids []int, tableId int64) ([]menu.InternalAvailableMenuResponse, error)
+	GetListMenusByIdsAndTablesByIds(ctx context.Context, ids []int, tableIds []int) (GetMenusAndTablesResponse, error)
 }
 
 type internalService struct {
@@ -20,15 +21,15 @@ func NewInternalService(sm menu.Service, st table.Service) Service {
 	return &internalService{sm: sm, st: st}
 }
 
-func (s *internalService) GetAvailableMenusAndValidateTable(ids []int, tableId int64) ([]menu.InternalAvailableMenuResponse, error) {
+func (s *internalService) GetAvailableMenusAndValidateTable(ctx context.Context, ids []int, tableId int64) ([]menu.InternalAvailableMenuResponse, error) {
 	if tableId > 0 {
-		err := s.st.ValidateTable(tableId)
+		err := s.st.ValidateTable(ctx, tableId)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	menus, err := s.sm.GetAvailableMenusByIds(ids)
+	menus, err := s.sm.GetAvailableMenusByIds(ctx, ids)
 	if err != nil {
 		return nil, err
 	}
@@ -36,8 +37,8 @@ func (s *internalService) GetAvailableMenusAndValidateTable(ids []int, tableId i
 	return menus, nil
 }
 
-func (s *internalService) GetListMenusByIdsAndTablesByIds(ids []int, tableIds []int) (GetMenusAndTablesResponse, error) {
-	menus, err := s.sm.GetListMenusByIDs(ids)
+func (s *internalService) GetListMenusByIdsAndTablesByIds(ctx context.Context, ids []int, tableIds []int) (GetMenusAndTablesResponse, error) {
+	menus, err := s.sm.GetListMenusByIDs(ctx, ids)
 	if err != nil {
 		return GetMenusAndTablesResponse{}, err
 	}
@@ -52,7 +53,7 @@ func (s *internalService) GetListMenusByIdsAndTablesByIds(ids []int, tableIds []
 
 	tables := make([]table.InternalTableResponse, 0)
 	if len(validTableIds) > 0 {
-		t, err := s.st.GetTablesByIds(validTableIds)
+		t, err := s.st.GetTablesByIds(ctx, validTableIds)
 		if err == nil && t != nil {
 			tables = t
 		}
