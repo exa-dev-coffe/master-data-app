@@ -117,6 +117,14 @@ func initiator() {
 		return c.Status(fiber.StatusNotFound).JSON(response.NotFound("Route not found", nil))
 	})
 
+	// Start gRPC Server for high-performance internal communication
+	grpcServer, _, err := internalModule.StartGrpcServer(db.DB, config.Config.GrpcPort)
+	if err != nil {
+		slog.Error("Failed to start gRPC server", "error", err)
+	} else if grpcServer != nil {
+		defer grpcServer.GracefulStop()
+	}
+
 	err = fiberApp.Listen(config.Config.Port)
 
 	if err != nil {

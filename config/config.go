@@ -31,6 +31,7 @@ type appConfig struct {
 	RedisPassword     string
 	ServiceMasterDataUrl string
 	ServiceAccountUrl string
+	GrpcPort          string
 }
 
 var Config appConfig
@@ -69,6 +70,10 @@ func init() {
 		RedisPassword:        viper.GetString("REDIS_PASSWORD"),
 		ServiceMasterDataUrl: viper.GetString("SERVICE_MASTER_DATA_URL"),
 		ServiceAccountUrl:    viper.GetString("SERVICE_ACCOUNT_URL"),
+		GrpcPort:             viper.GetString("GRPC_PORT"),
+	}
+	if Config.GrpcPort == "" {
+		Config.GrpcPort = ":9081"
 	}
 	if Config.ServiceMasterDataUrl == "" {
 		Config.ServiceMasterDataUrl = "http://localhost:8080"
