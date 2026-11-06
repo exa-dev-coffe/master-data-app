@@ -34,6 +34,10 @@ func NewListener(ch *amqp.Channel, db *sqlx.DB) Listener {
 		slog.Error("Failed to start listening to menu.set_rating queue", "error", err)
 	}
 
+	if err := l.ListenUpdateAvailability(); err != nil {
+		slog.Error("Failed to start listening to menu.update_availability queue", "error", err)
+	}
+
 	return l
 
 }
@@ -73,6 +77,54 @@ func (l *menuListener) ListenSetRatingMenu() error {
 		},
 		true,
 		false, false, false, false, "Master Data Update Rating Menu", true, amqp.Table{},
+		amqp.Table{},
+	)
+}
+
+func (l *menuListener) ListenUpdateAvailability() error {
+	slog.Info("Starting to listen to menu.update_availability queue")
+	return lib.ListenQueue(
+		l.ch,
+		"menu.update_availability",
+		"",
+		"menu.update_availability",
+		lib.ExchangeDirect,
+		func(delivery amqp.Delivery) error {
+			slog.Info("Received menu availability update", "body", string(delivery.Body))
+			var payload struct {
+				MenuId      int  `json:"menu_id"`
+				IsAvailable bool `json:"is_available"`
+			}
+			if err := json.Unmarshal(delivery.Body, &payload); err != nil {
+				slog.Error("Failed to parse menu availability message body", "error", err)
+				return response.InternalServerError("Failed to parse message body", nil)
+			}
+
+			if payload.MenuId <= 0 {
+				slog.Warn("Ignoring invalid menu ID in availability update", "menu_id", payload.MenuId)
+				return nil
+			}
+
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+
+			req := UpdateMenuAvailabilityRequest{
+				Id:          payload.MenuId,
+				IsAvailable: &payload.IsAvailable,
+				UpdatedBy:   1, // Automated Inventory System
+			}
+
+			err := common.WithTransactionContext[UpdateMenuAvailabilityRequest](ctx, l.db, l.service.UpdateMenuAvailability, req)
+			if err != nil {
+				slog.Error("Failed to update menu availability via RabbitMQ", "error", err, "menu_id", payload.MenuId)
+				return response.InternalServerError("Failed to update menu availability", nil)
+			}
+
+			slog.Info("Successfully updated menu availability via RabbitMQ", "menu_id", payload.MenuId, "is_available", payload.IsAvailable)
+			return nil
+		},
+		true,
+		false, false, false, false, "Master Data Update Menu Availability", true, amqp.Table{},
 		amqp.Table{},
 	)
 }
